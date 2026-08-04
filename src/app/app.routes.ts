@@ -18,10 +18,32 @@ export const routes: Routes = [
         loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
       },
       {
-        // Lazy-loaded feature chunk.
-        path: 'users',
-        loadComponent: () =>
-          import('./features/users/users-list.page').then((m) => m.UsersListPage),
+        path: 'public-map',
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+      },
+      {
+        path: 'incident-reporting',
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+      },
+      {
+        path: 'resolution-workflow',
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+      },
+      {
+        path: 'sla-escalation',
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+      },
+      {
+        path: 'reports-analytics',
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+      },
+      {
+        path: 'admin',
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
       },
     ],
   },

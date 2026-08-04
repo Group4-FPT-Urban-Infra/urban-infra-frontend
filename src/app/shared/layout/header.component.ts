@@ -24,25 +24,25 @@ import { TranslateService } from '@ngx-translate/core'
           </svg>
         </button>
 
-        <div class="flex items-center gap-2">
-          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20">
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white shadow-md shadow-orange-500/20">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
           <div class="hidden sm:block">
-            <h1 class="text-base font-bold tracking-tight text-slate-900 dark:text-white">Enterprise Carpool</h1>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Hệ thống Quản lý Đi chung xe Nội bộ</p>
+            <h1 class="text-base font-bold tracking-tight text-slate-900 dark:text-white">Urban Infrastructure Portal</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Hệ thống Báo cáo & Xử lý Sự cố Hạ tầng Đô thị</p>
           </div>
         </div>
       </div>
 
       <!-- Right: Actions, Language, User Info & Logout -->
       <div class="flex items-center gap-3 sm:gap-4">
-        <!-- Quick Stats Badge -->
-        <div class="hidden md:flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
-          <span class="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>1,250 km tiết kiệm tháng này</span>
+        <!-- Quick Stats SLA Badge -->
+        <div class="hidden md:flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+          <span class="inline-block h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>94.2% Sự cố đạt cam kết SLA</span>
         </div>
 
         <!-- Language Selector -->
@@ -57,18 +57,18 @@ import { TranslateService } from '@ngx-translate/core'
           }
         </select>
 
-        <!-- User Profile Dropdown / Card -->
+        <!-- User Profile Dropdown -->
         <div class="flex items-center gap-3 border-l border-slate-200 pl-3 dark:border-slate-800">
           <div class="flex items-center gap-2">
-            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
               {{ getUserInitials() }}
             </div>
             <div class="hidden text-left lg:block">
               <p class="text-xs font-semibold text-slate-900 dark:text-white">
-                {{ store.user()?.name || 'Nguyễn Văn A' }}
+                {{ store.user()?.name || 'Cán bộ Xử lý' }}
               </p>
-              <span class="inline-flex items-center rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium text-teal-700 ring-1 ring-inset ring-teal-600/20 dark:bg-teal-900/30 dark:text-teal-400">
-                Tài xế & Hành khách
+              <span class="inline-flex items-center rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 ring-1 ring-inset ring-orange-600/20 dark:bg-orange-900/30 dark:text-orange-400">
+                Đội Quản lý Đô thị
               </span>
             </div>
           </div>
@@ -105,7 +105,7 @@ export class HeaderComponent {
   }
 
   getUserInitials(): string {
-    const name = this.store.user()?.name || 'Nguyễn Văn A'
+    const name = this.store.user()?.name || 'Cán bộ Xử lý'
     return name
       .split(' ')
       .map((n) => n[0])
