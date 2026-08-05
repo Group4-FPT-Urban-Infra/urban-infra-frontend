@@ -28,7 +28,10 @@ export const routes: Routes = [
       },
       {
         path: 'incident-reporting',
-        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+        loadComponent: () =>
+          import('./features/create-incident/create-incident.page').then(
+            (m) => m.CreateIncidentPage
+          ),
       },
       {
         path: 'resolution-workflow',
