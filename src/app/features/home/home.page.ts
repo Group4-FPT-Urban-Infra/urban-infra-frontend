@@ -1,4 +1,5 @@
-import { Component } from '@angular/core'
+import { Component, inject, signal } from '@angular/core'
+import { Router } from '@angular/router'
 
 interface Incident {
   id: number
@@ -60,6 +61,7 @@ interface Incident {
           <div class="mt-2 flex flex-col gap-4 sm:flex-row">
             <button
               id="reportIncidentBtn"
+              (click)="navigateToCreateIncident()"
               class="flex items-center justify-center gap-2 rounded-lg bg-[var(--color-primary)] px-6 py-4 text-sm font-semibold text-[var(--color-on-primary)] shadow-sm transition-shadow hover:shadow-md"
             >
               <span class="material-symbols-outlined icon-filled text-[20px]" aria-hidden="true"
@@ -290,6 +292,7 @@ interface Incident {
   `,
 })
 export class HomePage {
+  private readonly router = inject(Router)
   protected readonly incidents: Incident[] = [
     {
       id: 1,
@@ -347,5 +350,9 @@ export class HomePage {
       case 'Resolved':
         return 'bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]'
     }
+  }
+
+  navigateToCreateIncident(): void {
+    void this.router.navigate(['/incident-reporting'])
   }
 }
