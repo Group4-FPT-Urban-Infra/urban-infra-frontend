@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { Router, RouterLink } from '@angular/router'
+import { AuthStore } from '../../core/auth/auth.store'
 
 @Component({
   selector: 'app-register-page',
@@ -327,7 +328,7 @@ import { Router, RouterLink } from '@angular/router'
               <button
                 type="submit"
                 id="registerSubmit"
-                [disabled]="isLoading() || !canSubmit()"
+                [disabled]="isLoading() || !canSubmit"
                 class="btn-primary mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-primary)] py-3 text-sm font-semibold text-[var(--color-on-primary)] shadow-sm transition-colors hover:bg-[var(--color-on-primary-fixed-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-fixed)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 @if (isLoading()) {
@@ -372,6 +373,7 @@ import { Router, RouterLink } from '@angular/router'
 })
 export class RegisterPage {
   private readonly router = inject(Router)
+  protected readonly store = inject(AuthStore)
 
   // ── Form fields ────────────────────────────────────────────────────────
   protected fullName = ''
@@ -424,26 +426,34 @@ export class RegisterPage {
   }
 
   // ── Derived ────────────────────────────────────────────────────────────
-  protected readonly canSubmit = computed(
-    () =>
+  protected get canSubmit(): boolean {
+    return (
       this.fullName.trim().length > 0 &&
       this.email.trim().length > 0 &&
       this.password.length >= 8 &&
       this.password === this.confirmPassword &&
-      this.agreedToTerms,
-  )
+      this.agreedToTerms
+    )
+  }
 
   // ── Submit ─────────────────────────────────────────────────────────────
   async submit(): Promise<void> {
-    if (!this.canSubmit()) return
+    if (!this.canSubmit) return
     this.isLoading.set(true)
     this.errorMessage.set(null)
     try {
-      // TODO: wire up real registration API call
-      await new Promise((r) => setTimeout(r, 1200))
-      void this.router.navigateByUrl('/login')
-    } catch {
-      this.errorMessage.set('Registration failed. Please try again.')
+      await this.store.register({
+        fullName: this.fullName.trim(),
+        email: this.email.trim(),
+        phoneNumber: this.phone.trim(),
+        password: this.password,
+      })
+      // If backend auto-logs in (returns tokens), go to home; otherwise go to login
+      void this.router.navigateByUrl(this.store.isAuthenticated() ? '/' : '/login')
+    } catch (e) {
+      this.errorMessage.set(
+        e instanceof Error && e.message ? e.message : 'Registration failed. Please try again.',
+      )
     } finally {
       this.isLoading.set(false)
     }
