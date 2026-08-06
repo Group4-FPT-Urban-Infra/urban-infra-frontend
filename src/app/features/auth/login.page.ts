@@ -217,8 +217,8 @@ export class LoginPage {
   private readonly router = inject(Router)
   private readonly route = inject(ActivatedRoute)
 
-  protected email = 'demo@example.com'
-  protected password = 'password'
+  protected email = ''
+  protected password = ''
   protected rememberMe = false
   protected showPassword = signal(false)
 

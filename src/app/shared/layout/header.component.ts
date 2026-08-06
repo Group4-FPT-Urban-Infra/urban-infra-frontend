@@ -126,7 +126,7 @@ import { TranslateService } from '@ngx-translate/core'
 
           <div class="hidden text-left lg:block">
             <p class="text-xs font-semibold text-[var(--color-on-surface)]">
-              {{ store.user()?.name || 'Admin User' }}
+              {{ store.user()?.fullName || 'Admin User' }}
             </p>
           </div>
 
@@ -171,10 +171,10 @@ export class HeaderComponent {
   }
 
   getUserInitials(): string {
-    const name = this.store.user()?.name || 'Admin User'
+    const name = this.store.user()?.fullName || 'Admin User'
     return name
       .split(' ')
-      .map((n) => n[0])
+      .map((n: string) => n[0])
       .slice(-2)
       .join('')
       .toUpperCase()

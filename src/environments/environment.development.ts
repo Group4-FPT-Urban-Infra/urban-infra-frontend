@@ -1,8 +1,8 @@
-/** Development environment. Points at a public mock API so the app runs as-is. */
+/** Development environment. Points at the local UrbanInfraSystem backend. */
 export const environment = {
   production: false,
-  appName: 'Angular Base',
-  apiBaseUrl: 'https://jsonplaceholder.typicode.com',
+  appName: 'Urban Infra System',
+  apiBaseUrl: 'http://localhost:5080/api',
   defaultLocale: 'en',
   supportedLocales: ['en', 'vi'] as const,
 }
