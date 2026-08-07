@@ -9,11 +9,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage),
   },
   {
-    path: 'register',
-    canActivate: [guestGuard],
-    loadComponent: () => import('./features/auth/register.page').then((m) => m.RegisterPage),
-  },
-  {
     path: '',
     component: AppLayoutComponent,
     canActivate: [authGuard],
@@ -24,14 +19,12 @@ export const routes: Routes = [
       },
       {
         path: 'public-map',
-        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+        loadComponent: () =>
+          import('./features/public-map/public-map.page').then((m) => m.PublicMapPage),
       },
       {
         path: 'incident-reporting',
-        loadComponent: () =>
-          import('./features/create-incident/create-incident.page').then(
-            (m) => m.CreateIncidentPage
-          ),
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
       },
       {
         path: 'resolution-workflow',

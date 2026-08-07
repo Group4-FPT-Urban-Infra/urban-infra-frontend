@@ -1,54 +1,35 @@
 import { Component, signal } from '@angular/core'
 import { RouterOutlet } from '@angular/router'
 import { HeaderComponent } from './header.component'
+import { SidebarComponent } from './sidebar.component'
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, HeaderComponent],
+  imports: [RouterOutlet, HeaderComponent, SidebarComponent],
   template: `
-    <div
-      class="flex min-h-screen flex-col"
-      style="background-color: var(--color-background); color: var(--color-on-background);"
-    >
-      <!-- CivicShield Top NavBar -->
-      <app-header></app-header>
+    <div class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <!-- Header -->
+      <app-header
+        [sidebarCollapsed]="sidebarCollapsed()"
+        (toggleSidebar)="toggleSidebar()"
+      ></app-header>
 
-      <!-- Page content -->
-      <div class="flex-1">
-        <router-outlet></router-outlet>
+      <div class="flex">
+        <!-- Sidebar Navigation -->
+        <app-sidebar [collapsed]="sidebarCollapsed()"></app-sidebar>
+
+        <!-- Main Content Area -->
+        <main
+          [class.pl-64]="!sidebarCollapsed()"
+          [class.pl-20]="sidebarCollapsed()"
+          class="min-h-[calc(100vh-4rem)] flex-1 p-4 transition-all duration-300 sm:p-6 lg:p-8"
+        >
+          <div class="mx-auto max-w-7xl">
+            <router-outlet></router-outlet>
+          </div>
+        </main>
       </div>
-
-      <!-- Footer -->
-      <footer
-        class="flex flex-col items-center justify-between gap-4 border-t px-6 py-4 md:flex-row"
-        style="
-          background-color: var(--color-surface-container-lowest);
-          border-color: var(--color-outline-variant);
-        "
-      >
-        <div class="text-sm font-bold text-[var(--color-on-surface)]">CivicShield</div>
-        <div class="text-[11px] text-[var(--color-on-surface-variant)]">
-          © 2024 Urban Infrastructure Management Bureau. All rights reserved.
-        </div>
-        <div class="flex gap-4 text-[11px]">
-          <a
-            href="#"
-            class="text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-primary)]"
-            >Privacy Policy</a
-          >
-          <a
-            href="#"
-            class="text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-primary)]"
-            >Terms of Service</a
-          >
-          <a
-            href="#"
-            class="text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-primary)]"
-            >Accessibility Statement</a
-          >
-        </div>
-      </footer>
     </div>
   `,
 })
