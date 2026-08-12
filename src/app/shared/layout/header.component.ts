@@ -1,13 +1,13 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { Router } from '@angular/router'
+import { Router, RouterLink, RouterLinkActive } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
 import { TranslateService } from '@ngx-translate/core'
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   styles: [
     `
       .nav-link-active {
@@ -53,27 +53,46 @@ import { TranslateService } from '@ngx-translate/core'
         </div>
       </div>
 
-      <!-- Center: Nav links (desktop) -->
+      <!-- Center: Nav links (desktop) - Dashboard Tabs -->
       <div class="hidden items-center gap-6 md:flex">
-        
-         <a
-          href="#"
-          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50"
+
+        <!-- Dashboard Tab - navigates to main dashboard -->
+        <a
+          routerLink="/citizen/dashboard"
+          routerLinkActive="nav-link-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
         >
           Dashboard
         </a>
+
         <a
-          href="#"
-          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50"
+          routerLink="/citizen/map"
+          routerLinkActive="nav-link-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+        >
+          Map View
+        </a>
+
+        <a
+          routerLink="/citizen/reports"
+          routerLinkActive="nav-link-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
         >
           Incidents
         </a>
-        <a
-          href="#"
-          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50"
-        >
-          Resources
-        </a>
+
+        @if (store.isAuthenticated()) {
+          <a
+            routerLink="/incident-reporting"
+            routerLinkActive="nav-link-active"
+            class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+          >
+            Report Issue
+          </a>
+        }
       </div>
 
       <!-- Right: Actions + Avatar -->
@@ -114,31 +133,41 @@ import { TranslateService } from '@ngx-translate/core'
 
         <!-- Avatar + Logout -->
         <div class="flex items-center gap-2 border-l border-[var(--color-outline-variant)] pl-3 ml-1">
-          <div
-            class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-[var(--color-outline-variant)]"
-          >
+          @if (store.isAuthenticated()) {
             <div
-              class="flex h-full w-full items-center justify-center bg-[var(--color-primary-fixed)] text-xs font-bold text-[var(--color-primary)]"
+              class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-[var(--color-outline-variant)]"
             >
-              {{ getUserInitials() }}
+              <div
+                class="flex h-full w-full items-center justify-center bg-[var(--color-primary-fixed)] text-xs font-bold text-[var(--color-primary)]"
+              >
+                {{ getUserInitials() }}
+              </div>
             </div>
-          </div>
 
-          <div class="hidden text-left lg:block">
-            <p class="text-xs font-semibold text-[var(--color-on-surface)]">
-              {{ store.user()?.fullName || 'Admin User' }}
-            </p>
-          </div>
+            <div class="hidden text-left lg:block">
+              <p class="text-xs font-semibold text-[var(--color-on-surface)]">
+                {{ store.user()?.fullName || 'Admin User' }}
+              </p>
+            </div>
 
-          <!-- Logout -->
-          <button
-            (click)="logout()"
-            title="Logout"
-            class="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--color-outline-variant)] px-2 text-xs text-[var(--color-on-surface-variant)] transition-colors hover:border-[var(--color-error)] hover:bg-[var(--color-error-container)] hover:text-[var(--color-on-error-container)]"
-          >
-            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">logout</span>
-            <span class="hidden sm:inline">Sign out</span>
-          </button>
+            <!-- Logout -->
+            <button
+              (click)="logout()"
+              title="Logout"
+              class="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--color-outline-variant)] px-2 text-xs text-[var(--color-on-surface-variant)] transition-colors hover:border-[var(--color-error)] hover:bg-[var(--color-error-container)] hover:text-[var(--color-on-error-container)]"
+            >
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">logout</span>
+              <span class="hidden sm:inline">Sign out</span>
+            </button>
+          } @else {
+            <!-- Login/Register for guests -->
+            <a
+              routerLink="/login"
+              class="inline-flex h-8 items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 text-xs font-medium text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary)]/90"
+            >
+              Sign In
+            </a>
+          }
         </div>
 
         <!-- Sidebar toggle (mobile) -->
