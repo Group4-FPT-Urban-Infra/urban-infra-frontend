@@ -8,6 +8,58 @@ export type IncidentPriority = 'low' | 'medium' | 'high'
 
 export type IncidentStatus = 'Open' | 'Investigating' | 'Resolved'
 
+// === API Lookup Interfaces ===
+
+export interface AreaLookupItem {
+  areaId: number
+  areaCode: string
+  areaName: string
+  areaType: string
+  isActive: boolean
+}
+
+export interface IssueTypeLookupItem {
+  issueTypeId: number
+  parentIssueTypeId: number | null
+  typeCode: string
+  typeName: string
+  iconUrl: string | null
+  description: string | null
+}
+
+export interface PriorityLookupItem {
+  priorityId: number
+  priorityCode: string
+  priorityName: string
+  severityRank: number
+  isActive: boolean
+}
+
+export interface NearbyIssueResponse {
+  id: number
+  publicCode: string
+  title: string
+  issueType: LookupItemResponse
+  area: LookupItemResponse
+  priority: LookupItemResponse
+  status: LookupItemResponse
+  latitude: number
+  longitude: number
+  thumbnailUrl: string | null
+  upvoteCount: number
+  hasUpvoted: boolean
+  reportedAt: string
+  distanceMeters: number
+}
+
+export interface LookupItemResponse {
+  id: number
+  name: string
+  code: string
+}
+
+// === Local Types ===
+
 export interface LocationData {
   latitude: number
   longitude: number
@@ -17,8 +69,10 @@ export interface LocationData {
 }
 
 export interface IncidentDetails {
-  category: IncidentCategory | null
-  priority: IncidentPriority
+  areaId: number | null
+  issueTypeId: number | null
+  priorityId: number | null
+  title: string
   description: string
 }
 
@@ -31,7 +85,7 @@ export interface DuplicateIncident {
   id: string
   title: string
   description: string
-  status: IncidentStatus
+  status: string
   distance: number
   timeAgo: string
   icon: string
@@ -52,6 +106,16 @@ export interface CreateIncidentState {
   isCheckingDuplicates: boolean
   isSubmitting: boolean
   skipDuplicates: boolean
+  // Lookup data
+  areas: AreaLookupItem[]
+  issueTypes: IssueTypeLookupItem[]
+  priorities: PriorityLookupItem[]
+}
+
+export interface CreateIncidentResult {
+  success: boolean
+  incidentId?: string
+  publicCode?: string
 }
 
 export const CATEGORY_LABELS: Record<IncidentCategory, string> = {

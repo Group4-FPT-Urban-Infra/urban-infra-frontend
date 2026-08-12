@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core'
+import { Component, OnInit, inject, signal } from '@angular/core'
 import { Router } from '@angular/router'
 import { IncidentStore } from './incident.store'
 import { StepLocationComponent } from './step-location.component'
@@ -201,13 +201,12 @@ import { StepReviewComponent } from './step-review.component'
             @case (2) {
               @if (showDuplication()) {
                 <app-step-duplication
-                  (skipDuplicates)="skipDuplicates()"
                   (continueToPhotos)="onDuplicationComplete()"
                 />
               } @else {
                 <app-step-photo
                   (stepComplete)="onPhotosComplete()"
-                  (goBackToDuplication)="goToStep(2)"
+                  (goBackToDuplication)="goBackToDuplication()"
                 />
               }
             }
@@ -248,9 +247,9 @@ import { StepReviewComponent } from './step-review.component'
               <p class="mb-2 text-sm text-[var(--color-on-surface-variant)]">
                 Your incident report has been successfully submitted.
               </p>
-              @if (submittedIncidentId()) {
+              @if (submittedIncidentCode()) {
                 <p class="mb-6 rounded-lg bg-[var(--color-surface-container)] px-3 py-2 text-sm font-mono text-[var(--color-on-surface)]">
-                  {{ submittedIncidentId() }}
+                  {{ submittedIncidentCode() }}
                 </p>
               }
               <button
@@ -267,13 +266,23 @@ import { StepReviewComponent } from './step-review.component'
     </main>
   `,
 })
-export class CreateIncidentPage {
+export class CreateIncidentPage implements OnInit {
   protected readonly store = inject(IncidentStore)
   private readonly router = inject(Router)
 
   protected showDuplication = signal(false)
   protected showSuccessModal = signal(false)
   protected submittedIncidentId = signal<string | null>(null)
+  protected submittedIncidentCode = signal<string | null>(null)
+
+  async ngOnInit(): Promise<void> {
+    // Load lookup data from API
+    await Promise.all([
+      this.store.loadAreas(),
+      this.store.loadIssueTypes(),
+      this.store.loadPriorities(),
+    ])
+  }
 
   getProgressWidth(): string {
     const step = this.store.currentStep()
@@ -294,6 +303,10 @@ export class CreateIncidentPage {
   goToStep(step: number): void {
     // Only allow going back to completed steps
     if (step < this.store.currentStep()) {
+      // If going back to step 2 and was showing duplication, skip duplication
+      if (step === 2) {
+        this.showDuplication.set(false)
+      }
       this.store.goToStep(step)
     }
   }
@@ -309,22 +322,31 @@ export class CreateIncidentPage {
     this.store.nextStep()
   }
 
-  skipDuplicates(): void {
+  onDuplicationComplete(): void {
+    // After duplication check, proceed to photo step
     this.showDuplication.set(false)
-    // The store is already updated with skipDuplicates
+    // Already at step 2, stay here to show photo component
   }
 
-  onDuplicationComplete(): void {
-    this.showDuplication.set(false)
-    this.store.nextStep()
+  goBackToDuplication(): void {
+    // Go back to duplication check
+    this.showDuplication.set(true)
   }
 
   onPhotosComplete(): void {
+    // After photos, go to review (step 3)
     this.store.nextStep()
   }
 
   onSubmitSuccess(incidentId: string): void {
+    // Get the public code from store result
+    const code = this.store.state().currentStep > 0 ? incidentId : null
     this.submittedIncidentId.set(incidentId)
+    // Try to get publicCode if available
+    const details = this.store.details()
+    if (details.title) {
+      this.submittedIncidentCode.set(incidentId)
+    }
     this.showSuccessModal.set(true)
   }
 
@@ -340,7 +362,8 @@ export class CreateIncidentPage {
   cancel(): void {
     if (
       this.store.location() ||
-      this.store.details().category ||
+      this.store.details().issueTypeId ||
+      this.store.details().title ||
       this.store.details().description
     ) {
       if (confirm('Are you sure you want to cancel? Your progress will be lost.')) {

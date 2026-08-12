@@ -1,6 +1,5 @@
-import { Component, EventEmitter, Output, inject, signal } from '@angular/core'
+import { Component, EventEmitter, Output, inject } from '@angular/core'
 import { IncidentStore } from './incident.store'
-import { CATEGORY_LABELS, PRIORITY_LABELS } from './incident.types'
 
 @Component({
   selector: 'app-step-review',
@@ -47,9 +46,17 @@ import { CATEGORY_LABELS, PRIORITY_LABELS } from './incident.types'
             </button>
           </div>
           <div class="p-4">
-            <p class="text-sm text-[var(--color-on-surface)]">
+            <!-- Area -->
+            @if (getAreaName()) {
+              <p class="text-sm font-medium text-[var(--color-on-surface)]">
+                {{ getAreaName() }}
+              </p>
+            }
+            <!-- Address -->
+            <p class="mt-1 text-sm text-[var(--color-on-surface)]">
               {{ store.location()?.address || 'No address provided' }}
             </p>
+            <!-- Coordinates -->
             @if (store.location()?.latitude && store.location()?.longitude) {
               <p class="mt-1 text-xs text-[var(--color-on-surface-variant)]">
                 {{ store.location()!.latitude.toFixed(6) }}, {{ store.location()!.longitude.toFixed(6) }}
@@ -80,21 +87,31 @@ import { CATEGORY_LABELS, PRIORITY_LABELS } from './incident.types'
             </button>
           </div>
           <div class="p-4">
-            <div class="flex flex-wrap gap-2">
-              @if (store.details().category) {
+            <!-- Title -->
+            <h4 class="text-base font-semibold text-[var(--color-on-surface)]">
+              {{ store.details().title || 'No title' }}
+            </h4>
+
+            <!-- Tags -->
+            <div class="mt-2 flex flex-wrap gap-2">
+              @if (getIssueTypeName()) {
                 <span
                   class="inline-flex items-center rounded-full bg-[var(--color-primary-container)] px-3 py-1 text-[12px] font-medium text-[var(--color-on-primary-container)]"
                 >
-                  {{ getCategoryLabel(store.details().category!) }}
+                  {{ getIssueTypeName() }}
                 </span>
               }
-              <span
-                class="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium"
-                [class]="getPriorityBadgeClass(store.details().priority)"
-              >
-                {{ getPriorityLabel(store.details().priority) }}
-              </span>
+              @if (getPriorityName()) {
+                <span
+                  class="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium"
+                  [class]="getPriorityBadgeClass()"
+                >
+                  {{ getPriorityName() }}
+                </span>
+              }
             </div>
+
+            <!-- Description -->
             @if (store.details().description) {
               <p class="mt-3 text-sm text-[var(--color-on-surface)]">
                 {{ store.details().description }}
@@ -191,21 +208,39 @@ export class StepReviewComponent {
 
   protected readonly store = inject(IncidentStore)
 
-  getCategoryLabel(category: string): string {
-    return CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] || category
+  getAreaName(): string {
+    const areaId = this.store.details().areaId
+    if (!areaId) return ''
+    const area = this.store.areas().find((a) => a.areaId === areaId)
+    return area?.areaName || ''
   }
 
-  getPriorityLabel(priority: string): string {
-    return PRIORITY_LABELS[priority as keyof typeof PRIORITY_LABELS] || priority
+  getIssueTypeName(): string {
+    const issueTypeId = this.store.details().issueTypeId
+    if (!issueTypeId) return ''
+    const issueType = this.store.issueTypes().find((t) => t.issueTypeId === issueTypeId)
+    return issueType?.typeName || ''
   }
 
-  getPriorityBadgeClass(priority: string): string {
-    switch (priority) {
-      case 'low':
+  getPriorityName(): string {
+    const priorityId = this.store.details().priorityId
+    if (!priorityId) return ''
+    const priority = this.store.priorities().find((p) => p.priorityId === priorityId)
+    return priority?.priorityName || ''
+  }
+
+  getPriorityBadgeClass(): string {
+    const priorityId = this.store.details().priorityId
+    if (!priorityId) return 'bg-[var(--color-surface-container-high)] text-[var(--color-on-surface)]'
+    const priority = this.store.priorities().find((p) => p.priorityId === priorityId)
+    if (!priority) return 'bg-[var(--color-surface-container-high)] text-[var(--color-on-surface)]'
+
+    switch (priority.severityRank) {
+      case 1:
         return 'bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]'
-      case 'medium':
+      case 2:
         return 'bg-[var(--color-tertiary-fixed)] text-[var(--color-on-tertiary-fixed)]'
-      case 'high':
+      case 3:
         return 'bg-[var(--color-error-container)] text-[var(--color-on-error-container)]'
       default:
         return 'bg-[var(--color-surface-container-high)] text-[var(--color-on-surface)]'
@@ -232,7 +267,9 @@ export class StepReviewComponent {
 
   async submit(): Promise<void> {
     const result = await this.store.submitIncident()
-    if (result.success && result.incidentId) {
+    if (result.success && result.publicCode) {
+      this.submitSuccess.emit(result.publicCode)
+    } else if (result.success && result.incidentId) {
       this.submitSuccess.emit(result.incidentId)
     }
   }
