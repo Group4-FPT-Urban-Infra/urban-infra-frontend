@@ -93,6 +93,80 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'staff',
+    loadComponent: () =>
+      import('./shared/layout/staff-layout.component').then((m) => m.StaffLayoutComponent),
+    children: [
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full',
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/staff/staff-home.page').then((m) => m.StaffHomeComponent),
+      },
+      {
+        path: 'map',
+        loadComponent: () =>
+          import('./features/citizen/citizen-map.page').then((m) => m.CitizenMapComponent),
+      },
+      {
+        path: 'incidents',
+        loadComponent: () =>
+          import('./features/staff/staff-incidents.page').then((m) => m.StaffIncidentsComponent),
+      },
+      {
+        path: 'incidents/:id',
+        loadComponent: () =>
+          import('./features/staff/staff-incident-detail.page').then((m) => m.StaffIncidentDetailComponent),
+      },
+    ],
+  },
+  {
+    path: 'staff-manager',
+    loadComponent: () =>
+      import('./shared/layout/staff-manager-layout.component').then((m) => m.StaffManagerLayoutComponent),
+    children: [
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full',
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/staff-manager/staff-manager-home.page').then((m) => m.StaffManagerHomeComponent),
+      },
+      {
+        path: 'map',
+        loadComponent: () =>
+          import('./features/citizen/citizen-map.page').then((m) => m.CitizenMapComponent),
+      },
+      {
+        path: 'incidents',
+        loadComponent: () =>
+          import('./features/staff-manager/staff-manager-incidents.page').then((m) => m.StaffManagerIncidentsComponent),
+      },
+      {
+        path: 'incidents/:id',
+        loadComponent: () =>
+          import('./features/staff-manager/staff-manager-incident-detail.page').then((m) => m.StaffManagerIncidentDetailComponent),
+      },
+      {
+        path: 'sla-alert',
+        loadComponent: () =>
+          import('./features/staff-manager/staff-manager-sla-alert.page').then((m) => m.StaffManagerSlaAlertComponent),
+      },
+      {
+        path: 'staffs',
+        loadComponent: () =>
+          import('./features/staff-manager/staff-manager-staffs.page').then((m) => m.StaffManagerStaffsComponent),
+      },
+    ],
+  },
+  {
     path: '**',
     loadComponent: () =>
       import('./features/not-found/not-found.page').then((m) => m.NotFoundPage),

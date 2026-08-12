@@ -56,33 +56,105 @@ import { TranslateService } from '@ngx-translate/core'
       <!-- Center: Nav links (desktop) - Dashboard Tabs -->
       <div class="hidden items-center gap-6 md:flex">
 
-        <!-- Dashboard Tab - navigates to main dashboard -->
-        <a
-          routerLink="/citizen/dashboard"
-          routerLinkActive="nav-link-active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-        >
-          Dashboard
-        </a>
-
-        <a
-          routerLink="/citizen/map"
-          routerLinkActive="nav-link-active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-        >
-          Map View
-        </a>
-
-        <a
-          routerLink="/citizen/reports"
-          routerLinkActive="nav-link-active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-        >
-          Incidents
-        </a>
+        @switch (getUserRole()) {
+          @case ('DepartmentStaff') {
+            <!-- Staff Dashboard -->
+            <a
+              routerLink="/staff/dashboard"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Staff Dashboard
+            </a>
+            <a
+              routerLink="/staff/map"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Map View
+            </a>
+            <a
+              routerLink="/staff/incidents"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Incidents
+            </a>
+          }
+          @case ('DepartmentManager') {
+            <!-- Staff Manager Dashboard -->
+            <a
+              routerLink="/staff-manager/dashboard"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Manager Dashboard
+            </a>
+            <a
+              routerLink="/staff-manager/map"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Map View
+            </a>
+            <a
+              routerLink="/staff-manager/incidents"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Incidents
+            </a>
+            <a
+              routerLink="/staff-manager/sla-alert"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              SLA & Alert
+            </a>
+            <a
+              routerLink="/staff-manager/staffs"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Staffs
+            </a>
+          }
+          @default {
+            <!-- Citizen Dashboard (default) -->
+            <a
+              routerLink="/citizen/dashboard"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Dashboard
+            </a>
+            <a
+              routerLink="/citizen/map"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Map View
+            </a>
+            <a
+              routerLink="/citizen/reports"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Incidents
+            </a>
+          }
+        }
 
         @if (store.isAuthenticated()) {
           <a
@@ -191,6 +263,18 @@ export class HeaderComponent {
   protected readonly translate = inject(TranslateService)
   private readonly router = inject(Router)
   protected readonly locales = ['en', 'vi']
+
+  getUserRole(): string {
+    const user = this.store.user()
+    if (!user) return 'Citizen'
+    
+    // Check roles array for role match
+    if (user.roles.includes('DepartmentManager')) return 'DepartmentManager'
+    if (user.roles.includes('DepartmentStaff')) return 'DepartmentStaff'
+    if (user.roles.includes('Admin')) return 'Admin'
+    
+    return 'Citizen'
+  }
 
   onLocaleChange(event: Event): void {
     const lang = (event.target as HTMLSelectElement).value
