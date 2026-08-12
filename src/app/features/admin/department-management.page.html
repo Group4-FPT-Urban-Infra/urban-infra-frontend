@@ -1,0 +1,615 @@
+<div class="flex min-h-screen overflow-hidden" style="background-color: var(--color-background)">
+  <app-admin-sidebar #sidebar></app-admin-sidebar>
+  <div class="flex flex-1 flex-col min-w-0 transition-all duration-300" [style.margin-left]="sidebar.open() ? '280px' : '0px'">
+    <div class="flex-1 overflow-y-auto">
+      <div class="mx-auto max-w-[1600px] px-4 md:px-8 py-8 flex flex-col gap-6">
+
+        <!-- ── Page Header ── -->
+        <header class="flex flex-col gap-4 border-b pb-6 md:flex-row md:items-end md:justify-between" style="border-color: var(--color-outline-variant)">
+          <div>
+            <div class="flex items-center gap-1.5 mb-2 text-xs" style="color: var(--color-on-surface-variant)">
+              <span>Admin</span>
+              <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
+              <span style="color: var(--color-primary); font-weight:600">Department Management</span>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight" style="color: var(--color-on-background)">Department Management</h1>
+            <p class="mt-1.5 text-sm max-w-2xl" style="color: var(--color-on-surface-variant)">
+              Manage city service departments, assigned districts, staff members and incident categories.
+            </p>
+          </div>
+          <button (click)="openAddModal()"
+            class="flex shrink-0 items-center gap-2 self-start rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all hover:shadow-md active:scale-[0.98] md:self-auto"
+            style="background-color: var(--color-primary-container); color: var(--color-on-primary-container)">
+            <span class="material-symbols-outlined" style="font-size:18px">add</span>
+            Add Department
+          </button>
+        </header>
+
+        <!-- ── KPI Cards ── -->
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          @for (card of summaryCards; track card.label) {
+            <div class="flex flex-col gap-3 rounded-2xl border p-5"
+              style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 4px 20px rgba(0,0,0,0.02)">
+              <div class="flex items-center justify-between" style="color:var(--color-on-surface-variant)">
+                <span class="text-[11px] font-semibold uppercase tracking-wider">{{ card.label }}</span>
+                <span class="material-symbols-outlined" style="font-size:20px">{{ card.icon }}</span>
+              </div>
+              <div class="font-bold tracking-tight mt-auto" [class]="card.large ? 'text-4xl' : 'text-2xl'" style="color:var(--color-on-background)">{{ card.value }}</div>
+            </div>
+          }
+        </div>
+
+        <!-- ── Toolbar ── -->
+        <div class="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between"
+          style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 2px 8px rgba(0,0,0,0.03)">
+          <div class="relative w-full sm:max-w-sm">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2" style="font-size:18px; color:var(--color-outline)">search</span>
+            <input type="text" [(ngModel)]="searchQuery" placeholder="Search departments..."
+              class="w-full rounded-xl border py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2"
+              style="background-color:var(--color-surface); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select [(ngModel)]="filterStatus"
+              class="rounded-xl border px-3 py-2 text-sm focus:outline-none appearance-none cursor-pointer"
+              style="background-color:var(--color-surface); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+              <option value="">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+            <select [(ngModel)]="filterDistrict"
+              class="rounded-xl border px-3 py-2 text-sm focus:outline-none appearance-none cursor-pointer"
+              style="background-color:var(--color-surface); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+              <option value="">All Districts</option>
+              <option value="Quận 1">Quận 1</option>
+              <option value="Quận 3">Quận 3</option>
+              <option value="Quận 5">Quận 5</option>
+            </select>
+            <div class="flex items-center overflow-hidden rounded-xl border" style="border-color:var(--color-outline-variant)">
+              <button (click)="viewMode.set('table')" class="px-3 py-2 text-sm transition-colors" title="Table"
+                [style]="viewMode()==='table' ? 'background-color:var(--color-primary);color:white' : 'background-color:var(--color-surface);color:var(--color-on-surface-variant)'">
+                <span class="material-symbols-outlined" style="font-size:18px">table_rows</span>
+              </button>
+              <button (click)="viewMode.set('tree')" class="px-3 py-2 text-sm transition-colors" title="Tree"
+                [style]="viewMode()==='tree' ? 'background-color:var(--color-primary);color:white' : 'background-color:var(--color-surface);color:var(--color-on-surface-variant)'">
+                <span class="material-symbols-outlined" style="font-size:18px">account_tree</span>
+              </button>
+              <button (click)="viewMode.set('grid')" class="px-3 py-2 text-sm transition-colors" title="Grid"
+                [style]="viewMode()==='grid' ? 'background-color:var(--color-primary);color:white' : 'background-color:var(--color-surface);color:var(--color-on-surface-variant)'">
+                <span class="material-symbols-outlined" style="font-size:18px">grid_view</span>
+              </button>
+            </div>
+            <button (click)="loadDepartments()"
+              class="flex items-center gap-1 rounded-xl border px-3 py-2 text-sm transition-colors hover:bg-[var(--color-surface-container)]"
+              style="border-color:var(--color-outline-variant); color:var(--color-on-surface-variant)" title="Reload">
+              <span class="material-symbols-outlined" [class.animate-spin]="loading()" style="font-size:18px">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        @if (loading()) {
+          <div class="flex flex-col items-center justify-center gap-3 py-20" style="color:var(--color-on-surface-variant)">
+            <span class="material-symbols-outlined animate-spin" style="font-size:40px; color:var(--color-primary)">progress_activity</span>
+            <span class="text-sm">Loading departments...</span>
+          </div>
+        }
+
+        <!-- Error -->
+        @if (!loading() && errorMessage()) {
+          <div class="flex items-center gap-3 rounded-2xl border px-5 py-4"
+            style="background-color:var(--color-error-container); border-color:rgba(186,26,26,.3)">
+            <span class="material-symbols-outlined" style="font-size:22px; color:var(--color-error)">error</span>
+            <span class="text-sm font-medium" style="color:var(--color-on-error-container)">{{ errorMessage() }}</span>
+            <button (click)="loadDepartments()" class="ml-auto text-xs font-semibold underline" style="color:var(--color-error)">Retry</button>
+          </div>
+        }
+
+        <!-- ══ TABLE VIEW ══ -->
+        @if (!loading() && !errorMessage() && viewMode() === 'table') {
+          <div class="overflow-hidden rounded-2xl border"
+            style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 4px 20px rgba(0,0,0,0.02)">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="border-b" style="border-color:rgba(195,198,215,0.4); background-color:var(--color-surface-bright)">
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Department</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Head of Dept.</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Contact</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Assign District</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Incident Category</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Status</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap text-right" style="color:var(--color-on-surface-variant)">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (dept of filteredDepts; track dept.id; let even = $even) {
+                    <tr class="dept-row border-b transition-colors cursor-pointer hover:bg-[var(--color-surface-container-low)]"
+                      [style]="even ? 'border-color:rgba(195,198,215,0.25);background-color:var(--color-surface-container-lowest)' : 'border-color:rgba(195,198,215,0.25);background-color:var(--color-surface)'">
+                      <!-- Name & Code -->
+                      <td class="px-5 py-4">
+                        <div class="flex items-center gap-3">
+                          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" [style]="getDeptIconStyle(dept)">
+                            <span class="material-symbols-outlined" style="font-size:18px">{{ getDeptIcon(dept.name) }}</span>
+                          </div>
+                          <div>
+                            <span class="text-sm font-semibold" style="color:var(--color-on-background)">{{ dept.name }}</span>
+                            @if (dept.originalCode) {
+                              <p class="mt-0.5"><code class="rounded px-1.5 py-0.5 text-[10px] font-mono" style="background-color:var(--color-surface-container); color:var(--color-on-surface-variant)">{{ dept.originalCode }}</code></p>
+                            }
+                          </div>
+                        </div>
+                      </td>
+                      <!-- Head -->
+                      <td class="px-5 py-4">
+                        @if (dept.headVacant) {
+                          <div class="flex items-center gap-2" style="opacity:0.55; color:var(--color-on-surface-variant)">
+                            <span class="material-symbols-outlined" style="font-size:22px">account_circle</span>
+                            <span class="text-sm italic">Vacant</span>
+                          </div>
+                        } @else {
+                          <div class="flex items-center gap-2">
+                            <div class="avatar-ring flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+                              style="background-color:var(--color-primary-fixed); color:var(--color-primary)">{{ dept.headInitials }}</div>
+                            <span class="text-sm" style="color:var(--color-on-surface)">{{ dept.head }}</span>
+                          </div>
+                        }
+                      </td>
+                      <!-- Contact -->
+                      <td class="px-5 py-4">
+                        <div class="flex flex-col gap-0.5">
+                          @if (dept.originalEmail) {
+                            <div class="flex items-center gap-1 text-xs" style="color:var(--color-on-surface-variant)">
+                              <span class="material-symbols-outlined" style="font-size:14px">mail</span>
+                              {{ dept.originalEmail }}
+                            </div>
+                          }
+                          @if (dept.originalPhone) {
+                            <div class="flex items-center gap-1 text-xs" style="color:var(--color-on-surface-variant)">
+                              <span class="material-symbols-outlined" style="font-size:14px">phone</span>
+                              {{ dept.originalPhone }}
+                            </div>
+                          }
+                          @if (!dept.originalEmail && !dept.originalPhone) {
+                            <span class="text-xs italic" style="color:var(--color-outline)">—</span>
+                          }
+                        </div>
+                      </td>
+                      <!-- Assign District -->
+                      <td class="px-5 py-4">
+                        <div class="flex flex-wrap gap-1">
+                          @for (d of dept.assignedAreas.slice(0,2); track d) {
+                            <span class="rounded-full border px-2.5 py-1 text-[11px] font-medium"
+                              style="background-color:var(--color-surface-container-high); color:var(--color-on-surface-variant); border-color:rgba(195,198,215,0.35)">{{ d }}</span>
+                          }
+                          @if (dept.assignedAreas.length > 2) {
+                            <span class="rounded-full border px-2.5 py-1 text-[11px] font-bold"
+                              style="background-color:var(--color-surface-container-highest); color:var(--color-on-surface-variant); border-color:rgba(195,198,215,0.35)">+{{ dept.assignedAreas.length - 2 }}</span>
+                          }
+                          @if (dept.assignedAreas.length === 0) {
+                            <span class="text-xs italic" style="color:var(--color-outline)">—</span>
+                          }
+                        </div>
+                      </td>
+                      <!-- Incident Category -->
+                      <td class="px-5 py-4">
+                        <div class="flex flex-wrap gap-1">
+                          @for (cat of dept.assignedCategories.slice(0,2); track cat) {
+                            <span class="rounded-full border px-2.5 py-1 text-[11px] font-medium"
+                              style="background-color:var(--color-primary-container); color:var(--color-on-primary-container); border-color:rgba(195,198,215,0.35)">{{ cat }}</span>
+                          }
+                          @if (dept.assignedCategories.length > 2) {
+                            <span class="rounded-full border px-2.5 py-1 text-[11px] font-bold"
+                              style="background-color:var(--color-surface-container-highest); color:var(--color-on-surface-variant); border-color:rgba(195,198,215,0.35)">+{{ dept.assignedCategories.length - 2 }}</span>
+                          }
+                          @if (dept.assignedCategories.length === 0) {
+                            <span class="text-xs italic" style="color:var(--color-outline)">—</span>
+                          }
+                        </div>
+                      </td>
+                      <!-- Status -->
+                      <td class="px-5 py-4">
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                          [class]="dept.status === 'Active' ? 'status-active' : 'status-inactive'">
+                          <span class="h-1.5 w-1.5 rounded-full" [style]="dept.status === 'Active' ? 'background:#059669' : 'background:var(--color-outline)'"></span>
+                          {{ dept.status }}
+                        </span>
+                      </td>
+                      <!-- Actions -->
+                      <td class="px-5 py-4 text-right">
+                        <div class="row-actions flex items-center justify-end gap-1">
+                          <button (click)="openAssignModal(dept)" class="rounded-lg p-1.5 transition-colors hover:bg-[var(--color-primary-container)]" style="color:var(--color-primary)" title="Assign District/Category">
+                            <span class="material-symbols-outlined" style="font-size:18px">assignment_add</span>
+                          </button>
+                          <button (click)="openEditModal(dept)" class="rounded-lg p-1.5 transition-colors hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)" title="Edit">
+                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                          </button>
+                          <button (click)="confirmDelete(dept)" class="rounded-lg p-1.5 transition-colors hover:bg-[var(--color-error-container)]" style="color:var(--color-error)" title="Delete">
+                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                  @if (filteredDepts.length === 0) {
+                    <tr>
+                      <td colspan="7" class="px-5 py-12 text-center text-sm" style="color:var(--color-on-surface-variant)">
+                        <span class="material-symbols-outlined block mx-auto mb-2" style="font-size:40px; opacity:0.4">search_off</span>
+                        No departments match your search.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="flex items-center justify-between border-t px-5 py-3.5" style="border-color:rgba(195,198,215,0.4); background-color:var(--color-surface-bright)">
+              <span class="text-xs" style="color:var(--color-on-surface-variant)">Showing {{ filteredDepts.length }} of {{ departments.length }} departments</span>
+              <div class="flex items-center gap-1">
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg border" style="border-color:var(--color-outline-variant); color:var(--color-on-surface-variant)">
+                  <span class="material-symbols-outlined" style="font-size:18px">chevron_left</span>
+                </button>
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg border font-semibold text-sm" style="background-color:var(--color-primary); border-color:var(--color-primary); color:white">1</button>
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg border" style="border-color:var(--color-outline-variant); color:var(--color-on-surface-variant)">
+                  <span class="material-symbols-outlined" style="font-size:18px">chevron_right</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ══ TREE VIEW ══ -->
+        @if (!loading() && !errorMessage() && viewMode() === 'tree') {
+          <div class="overflow-hidden rounded-2xl border p-6"
+            style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 4px 20px rgba(0,0,0,0.02)">
+            @if (rootDepts.length === 0) {
+              <div class="flex flex-col items-center gap-3 py-12" style="color:var(--color-on-surface-variant)">
+                <span class="material-symbols-outlined" style="font-size:40px; opacity:0.4">corporate_fare</span>
+                <span class="text-sm">No departments found.</span>
+              </div>
+            }
+            @for (root of rootDepts; track root.id) {
+              <ng-container *ngTemplateOutlet="treeNode; context:{ dept: root, depth: 0 }"></ng-container>
+            }
+          </div>
+          <ng-template #treeNode let-dept="dept" let-depth="depth">
+            <div [style.margin-left.px]="depth * 24" class="mb-1">
+              <div class="group flex items-center gap-3 rounded-xl px-4 py-3 transition-all hover:bg-[var(--color-surface-container)]">
+                @if (dept.childCount > 0) {
+                  <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-outline)">arrow_drop_down</span>
+                } @else {
+                  <span style="width:18px; display:inline-block"></span>
+                }
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" [style]="getDeptIconStyle(dept)">
+                  <span class="material-symbols-outlined" style="font-size:16px">{{ getDeptIcon(dept.name) }}</span>
+                </div>
+                <div class="flex flex-1 items-center gap-3 min-w-0">
+                  <span class="font-semibold text-sm truncate" style="color:var(--color-on-background)">{{ dept.name }}</span>
+                  @if (dept.originalCode) {
+                    <code class="rounded px-1.5 py-0.5 text-[11px] font-mono shrink-0" style="background-color:var(--color-surface-container); color:var(--color-on-surface-variant)">{{ dept.originalCode }}</code>
+                  }
+                  @if (!dept.headVacant) {
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <div class="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold" style="background-color:var(--color-primary-fixed); color:var(--color-primary)">{{ dept.headInitials }}</div>
+                      <span class="text-xs" style="color:var(--color-on-surface-variant)">{{ dept.head }}</span>
+                    </div>
+                  }
+                </div>
+                <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0"
+                  [class]="dept.status === 'Active' ? 'status-active' : 'status-inactive'">
+                  <span class="h-1 w-1 rounded-full" [style]="dept.status === 'Active' ? 'background:#059669' : 'background:var(--color-outline)'"></span>
+                  {{ dept.status }}
+                </span>
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <button (click)="openEditModal(dept)" class="rounded-lg p-1 hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)">
+                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                  </button>
+                  <button (click)="confirmDelete(dept)" class="rounded-lg p-1 hover:bg-[var(--color-error-container)]" style="color:var(--color-error)">
+                    <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                  </button>
+                </div>
+              </div>
+              @if (dept.children && dept.children.length > 0) {
+                @for (child of dept.children; track child.id) {
+                  <ng-container *ngTemplateOutlet="treeNode; context:{ dept: child, depth: depth + 1 }"></ng-container>
+                }
+              }
+            </div>
+          </ng-template>
+        }
+
+        <!-- ══ GRID VIEW ══ -->
+        @if (!loading() && !errorMessage() && viewMode() === 'grid') {
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            @for (dept of filteredDepts; track dept.id) {
+              <div class="group relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer"
+                style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 4px 16px rgba(0,0,0,0.03)">
+                <div class="h-2 w-full" [style]="getDeptHeaderColor(dept)"></div>
+                <div class="flex flex-1 flex-col gap-3 p-5">
+                  <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-3">
+                      <div class="flex h-10 w-10 items-center justify-center rounded-xl" [style]="getDeptIconStyle(dept)">
+                        <span class="material-symbols-outlined" style="font-size:20px">{{ getDeptIcon(dept.name) }}</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-bold leading-tight" style="color:var(--color-on-background)">{{ dept.name }}</p>
+                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold mt-1"
+                          [class]="dept.status === 'Active' ? 'status-active' : 'status-inactive'">
+                          <span class="h-1 w-1 rounded-full" [style]="dept.status === 'Active' ? 'background:#059669' : 'background:var(--color-outline)'"></span>
+                          {{ dept.status }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="row-actions flex gap-1">
+                      <button (click)="openEditModal(dept)" class="rounded-lg p-1 hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)">
+                        <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                      </button>
+                      <button (click)="confirmDelete(dept)" class="rounded-lg p-1 hover:bg-[var(--color-error-container)]" style="color:var(--color-error)">
+                        <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Head -->
+                  <div class="flex items-center gap-2">
+                    @if (dept.headVacant) {
+                      <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-outline)">account_circle</span>
+                      <span class="text-xs italic" style="color:var(--color-on-surface-variant)">Vacant</span>
+                    } @else {
+                      <div class="avatar-ring flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold"
+                        style="background-color:var(--color-primary-fixed); color:var(--color-primary)">{{ dept.headInitials }}</div>
+                      <span class="text-xs" style="color:var(--color-on-surface)">{{ dept.head }}</span>
+                    }
+                  </div>
+                  <!-- Stats & Categories -->
+                  <div class="flex items-center justify-between rounded-xl px-3 py-2.5 text-xs" style="background-color:var(--color-surface-container)">
+                    <div class="text-center">
+                      <p class="font-bold text-base" style="color:var(--color-on-surface)">{{ dept.staffCount }}</p>
+                      <p style="color:var(--color-on-surface-variant)">Staff</p>
+                    </div>
+                    <div class="h-6 w-px" style="background-color:var(--color-outline-variant)"></div>
+                    <div class="text-center">
+                      <p class="font-bold text-base" style="color:var(--color-primary)">{{ dept.assignedCategories.length }}</p>
+                      <p style="color:var(--color-on-surface-variant)">Categories</p>
+                    </div>
+                    <div class="h-6 w-px" style="background-color:var(--color-outline-variant)"></div>
+                    <div class="text-center">
+                      <p class="font-bold text-base" style="color:var(--color-tertiary)">{{ dept.assignedAreas.length }}</p>
+                      <p style="color:var(--color-on-surface-variant)">Districts</p>
+                    </div>
+                  </div>
+                  <!-- Assigned Districts -->
+                  <div class="flex flex-wrap gap-1">
+                    @for (d of dept.assignedAreas.slice(0,3); track d) {
+                      <span class="rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                        style="background-color:var(--color-surface-container-high); color:var(--color-on-surface-variant); border-color:rgba(195,198,215,0.35)">{{ d }}</span>
+                    }
+                    @if (dept.assignedAreas.length > 3) {
+                      <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold"
+                        style="background-color:var(--color-surface-container-highest); color:var(--color-on-surface-variant); border-color:rgba(195,198,215,0.35)">+{{ dept.assignedAreas.length - 3 }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+            @if (filteredDepts.length === 0) {
+              <div class="col-span-full flex flex-col items-center gap-3 py-16" style="color:var(--color-on-surface-variant)">
+                <span class="material-symbols-outlined" style="font-size:48px; opacity:0.4">corporate_fare</span>
+                <span class="text-sm">No departments match your search.</span>
+              </div>
+            }
+          </div>
+        }
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Add/Edit Modal ══ -->
+@if (showModal()) {
+  <div class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" (click)="closeModal()">
+    <div class="w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl" style="background-color:var(--color-surface)" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between border-b px-6 py-4" style="border-color:var(--color-outline-variant)">
+        <div class="flex items-center gap-3">
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl" style="background-color:var(--color-primary-container)">
+            <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-on-primary-container)">{{ editingDept ? 'edit' : 'add' }}</span>
+          </div>
+          <h3 class="text-base font-bold" style="color:var(--color-on-surface)">{{ editingDept ? 'Edit Department' : 'Add New Department' }}</h3>
+        </div>
+        <button (click)="closeModal()" class="rounded-xl p-2 transition-colors hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)">
+          <span class="material-symbols-outlined" style="font-size:20px">close</span>
+        </button>
+      </div>
+      <div class="flex flex-col gap-4 px-6 py-5 max-h-[70vh] overflow-y-auto">
+        <!-- Code -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Department Code <span style="color:var(--color-error)">*</span></label>
+          <input type="text" [(ngModel)]="modalForm.departmentCode" placeholder="e.g. DP_01"
+            class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+        </div>
+        <!-- Name -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Department Name <span style="color:var(--color-error)">*</span></label>
+          <input type="text" [(ngModel)]="modalForm.name" placeholder="e.g. Public Works"
+            class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+        </div>
+        <!-- Head of Department (Edit only) -->
+        @if (editingDept) {
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Head of Department</label>
+            <select [(ngModel)]="modalForm.headUserId" [disabled]="hasExistingHead"
+              class="rounded-xl border px-4 py-2.5 text-sm focus:outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+              style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+              <option value="">-- Select Head --</option>
+              @for (staff of availableStaff; track staff.userId) {
+                <option [value]="staff.userId">{{ staff.fullName }} ({{ staff.jobTitle || 'Staff' }})</option>
+              }
+            </select>
+            @if (hasExistingHead) {
+              <span class="text-[11px]" style="color:var(--color-outline)">Manager already assigned. Remove them first to change.</span>
+            }
+          </div>
+        }
+        <!-- Email -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Email</label>
+          <input type="email" [(ngModel)]="modalForm.email" placeholder="dept@example.com"
+            class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+        </div>
+        <!-- Phone -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Phone</label>
+          <input type="text" [(ngModel)]="modalForm.phone" placeholder="e.g. 0123456789"
+            class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+        </div>
+        <!-- Address -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Address (Districts)</label>
+          <input type="text" [(ngModel)]="modalForm.address" placeholder="Quận 1, Quận 3, ..."
+            class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+        </div>
+        <!-- Status -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Status</label>
+          <select [(ngModel)]="modalForm.status"
+            class="rounded-xl border px-4 py-2.5 text-sm focus:outline-none appearance-none"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        @if (modalError()) {
+          <div class="flex items-center gap-2 rounded-xl border px-4 py-3" style="background-color:var(--color-error-container); border-color:rgba(186,26,26,.3)">
+            <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-error)">error</span>
+            <span class="text-xs font-medium" style="color:var(--color-on-error-container)">{{ modalError() }}</span>
+          </div>
+        }
+      </div>
+      <div class="flex items-center justify-end gap-3 border-t px-6 py-4" style="border-color:var(--color-outline-variant)">
+        <button (click)="closeModal()"
+          class="rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--color-surface-container)]"
+          style="border-color:var(--color-outline-variant); color:var(--color-on-surface)">Cancel</button>
+        <button (click)="saveModal()" [disabled]="savingModal()"
+          class="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+          style="background-color:var(--color-primary-container); color:var(--color-on-primary-container)">
+          @if (savingModal()) { <span class="material-symbols-outlined animate-spin" style="font-size:16px">progress_activity</span> }
+          {{ editingDept ? 'Save Changes' : 'Add Department' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Delete Confirm Modal ══ -->
+@if (deletingDept) {
+  <div class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" (click)="deletingDept = null">
+    <div class="w-full max-w-sm overflow-hidden rounded-2xl shadow-2xl" style="background-color:var(--color-surface)" (click)="$event.stopPropagation()">
+      <div class="p-6 flex flex-col items-center gap-4 text-center">
+        <div class="flex h-14 w-14 items-center justify-center rounded-full" style="background-color:var(--color-error-container)">
+          <span class="material-symbols-outlined" style="font-size:28px; color:var(--color-error)">delete_forever</span>
+        </div>
+        <div>
+          <h3 class="text-base font-bold" style="color:var(--color-on-surface)">Delete Department?</h3>
+          <p class="mt-1 text-sm" style="color:var(--color-on-surface-variant)">
+            <strong>{{ deletingDept.name }}</strong> will be permanently removed. This action cannot be undone.
+          </p>
+        </div>
+        @if (deleteError()) {
+          <div class="w-full rounded-xl border px-4 py-2.5 text-xs"
+            style="background-color:var(--color-error-container); border-color:rgba(186,26,26,.3); color:var(--color-on-error-container)">{{ deleteError() }}</div>
+        }
+        <div class="flex w-full gap-3">
+          <button (click)="deletingDept = null; deleteError.set('')"
+            class="flex-1 rounded-xl border py-2.5 text-sm font-medium hover:bg-[var(--color-surface-container)]"
+            style="border-color:var(--color-outline-variant); color:var(--color-on-surface)">Cancel</button>
+          <button (click)="deleteConfirmed()" [disabled]="deletingInProgress()"
+            class="flex-1 rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+            style="background-color:var(--color-error); color:white">
+            @if (deletingInProgress()) { <span class="material-symbols-outlined animate-spin" style="font-size:14px">progress_activity</span> }
+            @else { Delete }
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Toast ══ -->
+@if (toastMessage()) {
+  <div class="fixed bottom-6 right-6 z-[60] flex items-center gap-3 rounded-2xl px-5 py-3.5 shadow-2xl text-sm font-semibold"
+    [style]="toastSuccess() ? 'background-color:#059669;color:white' : 'background-color:var(--color-error);color:white'">
+    <span class="material-symbols-outlined" style="font-size:18px">{{ toastSuccess() ? 'check_circle' : 'error' }}</span>
+    {{ toastMessage() }}
+  </div>
+}
+
+<!-- ══ Assign Modal ══ -->
+@if (showAssignModal()) {
+  <div class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" (click)="closeAssignModal()">
+    <div class="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl" style="background-color:var(--color-surface)" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between border-b px-6 py-4" style="border-color:var(--color-outline-variant)">
+        <div class="flex items-center gap-3">
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl" style="background-color:var(--color-primary-container)">
+            <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-on-primary-container)">assignment_add</span>
+          </div>
+          <h3 class="text-base font-bold" style="color:var(--color-on-surface)">Assign District & Category</h3>
+        </div>
+        <button (click)="closeAssignModal()" class="rounded-xl p-2 transition-colors hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)">
+          <span class="material-symbols-outlined" style="font-size:20px">close</span>
+        </button>
+      </div>
+      <div class="flex flex-col gap-4 px-6 py-5">
+        <p class="text-sm mb-2" style="color:var(--color-on-surface-variant)">
+          Create a routing rule for <strong>{{ assigningDept?.name }}</strong>.
+        </p>
+
+        <!-- Area -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">District (Area) <span style="color:var(--color-error)">*</span></label>
+          <select [(ngModel)]="assignForm.areaId"
+            class="rounded-xl border px-4 py-2.5 text-sm focus:outline-none appearance-none"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+            <option value="">-- Select District --</option>
+            @for (area of availableAreas; track area.areaId) {
+              <option [value]="area.areaId">{{ area.areaName }} ({{ area.areaType }})</option>
+            }
+          </select>
+        </div>
+
+        <!-- Issue Type -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Incident Category <span style="color:var(--color-error)">*</span></label>
+          <select [(ngModel)]="assignForm.issueTypeId"
+            class="rounded-xl border px-4 py-2.5 text-sm focus:outline-none appearance-none"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+            <option value="">-- Select Category --</option>
+            @for (cat of availableIssueTypes; track cat.issueTypeId) {
+              <option [value]="cat.issueTypeId">{{ cat.typeName }}</option>
+            }
+          </select>
+        </div>
+
+        @if (assignModalError()) {
+          <div class="flex items-center gap-2 rounded-xl border px-4 py-3" style="background-color:var(--color-error-container); border-color:rgba(186,26,26,.3)">
+            <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-error)">error</span>
+            <span class="text-xs font-medium" style="color:var(--color-on-error-container)">{{ assignModalError() }}</span>
+          </div>
+        }
+      </div>
+      <div class="flex items-center justify-end gap-3 border-t px-6 py-4" style="border-color:var(--color-outline-variant)">
+        <button (click)="closeAssignModal()"
+          class="rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--color-surface-container)]"
+          style="border-color:var(--color-outline-variant); color:var(--color-on-surface)">Cancel</button>
+        <button (click)="saveAssignModal()" [disabled]="savingAssignModal()"
+          class="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+          style="background-color:var(--color-primary-container); color:var(--color-on-primary-container)">
+          @if (savingAssignModal()) { <span class="material-symbols-outlined animate-spin" style="font-size:16px">progress_activity</span> }
+          Assign
+        </button>
+      </div>
+    </div>
+  </div>
+}

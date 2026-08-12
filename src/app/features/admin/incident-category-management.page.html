@@ -1,0 +1,512 @@
+<div class="flex min-h-screen overflow-hidden" style="background-color: var(--color-background)">
+  <app-admin-sidebar #sidebar></app-admin-sidebar>
+  <div class="flex flex-1 flex-col min-w-0 transition-all duration-300" [style.margin-left]="sidebar.open() ? '280px' : '0px'">
+    <div class="flex-1 overflow-y-auto">
+      <div class="mx-auto max-w-[1600px] px-4 md:px-8 py-8 flex flex-col gap-6">
+
+        <!-- ── Page Header ── -->
+        <header class="flex flex-col gap-4 border-b pb-6 md:flex-row md:items-end md:justify-between" style="border-color: var(--color-outline-variant)">
+          <div>
+            <div class="flex items-center gap-1.5 mb-2 text-xs" style="color: var(--color-on-surface-variant)">
+              <span>Admin</span>
+              <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
+              <span style="color: var(--color-primary); font-weight:600">Incident Categories</span>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight" style="color: var(--color-on-background)">Incident Category Management</h1>
+            <p class="mt-1.5 text-sm max-w-2xl" style="color: var(--color-on-surface-variant)">
+              Manage incident categories (IssueType) hierarchically. Supports Material Symbol icons, SLA Policies, and routing rules configuration.
+            </p>
+          </div>
+          <button (click)="openAddModal()"
+            class="flex shrink-0 items-center gap-2 self-start rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all hover:shadow-md active:scale-[0.98] md:self-auto"
+            style="background-color: var(--color-primary-container); color: var(--color-on-primary-container)">
+            <span class="material-symbols-outlined" style="font-size:18px">add</span>
+            Add Category
+          </button>
+        </header>
+
+        <!-- ── KPI Cards ── -->
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          @for (card of summaryCards(); track card.label) {
+            <div class="flex flex-col gap-3 rounded-2xl border p-5"
+              style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 4px 20px rgba(0,0,0,0.02)">
+              <div class="flex items-center justify-between" style="color:var(--color-on-surface-variant)">
+                <span class="text-[11px] font-semibold uppercase tracking-wider">{{ card.label }}</span>
+                <span class="material-symbols-outlined" style="font-size:20px">{{ card.icon }}</span>
+              </div>
+              <div class="text-3xl font-bold tracking-tight mt-auto" style="color:var(--color-on-background)">{{ card.value }}</div>
+            </div>
+          }
+        </div>
+
+        <!-- ── Toolbar ── -->
+        <div class="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between"
+          style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 2px 8px rgba(0,0,0,0.03)">
+          <div class="relative w-full sm:max-w-sm">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2" style="font-size:18px; color:var(--color-outline)">search</span>
+            <input type="text" [(ngModel)]="searchQuery" (keyup.enter)="onSearch()"
+              placeholder="Search categories by name or code..."
+              class="w-full rounded-xl border py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2"
+              style="background-color:var(--color-surface); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select [(ngModel)]="filterStatus" (ngModelChange)="onSearch()"
+              class="rounded-xl border px-3 py-2 text-sm focus:outline-none appearance-none cursor-pointer"
+              style="background-color:var(--color-surface); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select [(ngModel)]="filterLevel" (ngModelChange)="onSearch()"
+              class="rounded-xl border px-3 py-2 text-sm focus:outline-none appearance-none cursor-pointer"
+              style="background-color:var(--color-surface); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+              <option value="">All Levels</option>
+              <option value="root">Root Only</option>
+              <option value="sub">Sub-categories Only</option>
+            </select>
+            <div class="flex items-center overflow-hidden rounded-xl border" style="border-color:var(--color-outline-variant)">
+              <button (click)="viewMode.set('table')" class="px-3 py-2 text-sm transition-colors" title="Table"
+                [style]="viewMode()==='table' ? 'background-color:var(--color-primary);color:white' : 'background-color:var(--color-surface);color:var(--color-on-surface-variant)'">
+                <span class="material-symbols-outlined" style="font-size:18px">table_rows</span>
+              </button>
+              <button (click)="viewMode.set('tree')" class="px-3 py-2 text-sm transition-colors" title="Tree"
+                [style]="viewMode()==='tree' ? 'background-color:var(--color-primary);color:white' : 'background-color:var(--color-surface);color:var(--color-on-surface-variant)'">
+                <span class="material-symbols-outlined" style="font-size:18px">account_tree</span>
+              </button>
+              <button (click)="viewMode.set('grid')" class="px-3 py-2 text-sm transition-colors" title="Grid"
+                [style]="viewMode()==='grid' ? 'background-color:var(--color-primary);color:white' : 'background-color:var(--color-surface);color:var(--color-on-surface-variant)'">
+                <span class="material-symbols-outlined" style="font-size:18px">grid_view</span>
+              </button>
+            </div>
+            <button (click)="loadData()"
+              class="flex items-center gap-1 rounded-xl border px-3 py-2 text-sm transition-colors hover:bg-[var(--color-surface-container)]"
+              style="border-color:var(--color-outline-variant); color:var(--color-on-surface-variant)" title="Reload">
+              <span class="material-symbols-outlined" [class.animate-spin]="isLoading()" style="font-size:18px">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        @if (isLoading()) {
+          <div class="flex flex-col items-center justify-center gap-3 py-20" style="color:var(--color-on-surface-variant)">
+            <span class="material-symbols-outlined animate-spin" style="font-size:40px; color:var(--color-primary)">progress_activity</span>
+            <span class="text-sm">Loading categories...</span>
+          </div>
+        }
+
+        <!-- Error -->
+        @if (!isLoading() && errorMessage()) {
+          <div class="flex items-center gap-3 rounded-2xl border px-5 py-4"
+            style="background-color:var(--color-error-container); border-color:rgba(186,26,26,.3)">
+            <span class="material-symbols-outlined" style="font-size:22px; color:var(--color-error)">error</span>
+            <span class="text-sm font-medium" style="color:var(--color-on-error-container)">{{ errorMessage() }}</span>
+            <button (click)="loadData()" class="ml-auto text-xs font-semibold underline" style="color:var(--color-error)">Retry</button>
+          </div>
+        }
+
+        <!-- ══ TABLE VIEW ══ -->
+        @if (!isLoading() && !errorMessage() && viewMode() === 'table') {
+          <div class="overflow-hidden rounded-2xl border"
+            style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 4px 20px rgba(0,0,0,0.02)">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="border-b" style="border-color:rgba(195,198,215,0.4); background-color:var(--color-surface-bright)">
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Category</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Code</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Parent</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Sub-types</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">SLA Policy</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style="color:var(--color-on-surface-variant)">Status</th>
+                    <th class="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap text-right" style="color:var(--color-on-surface-variant)">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (cat of categories(); track cat.issueTypeId; let even = $even) {
+                    <tr class="cat-row border-b transition-colors cursor-pointer hover:bg-[var(--color-surface-container-low)]"
+                      [style]="even ? 'border-color:rgba(195,198,215,0.25);background-color:var(--color-surface-container-lowest)' : 'border-color:rgba(195,198,215,0.25);background-color:var(--color-surface)'">
+                      <td class="px-5 py-4">
+                        <div class="flex items-center gap-3">
+                          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background-color:var(--color-primary-container); color:var(--color-on-primary-container)">
+                            <span class="material-symbols-outlined" style="font-size:18px">{{ cat.iconUrl || 'category' }}</span>
+                          </div>
+                          <div>
+                            <span class="text-sm font-semibold" style="color:var(--color-on-background)">{{ cat.typeName }}</span>
+                            @if (cat.description) {
+                              <p class="text-xs mt-0.5 truncate max-w-[200px]" style="color:var(--color-on-surface-variant)">{{ cat.description }}</p>
+                            }
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-5 py-4">
+                        <code class="rounded-lg px-2 py-1 text-xs font-mono" style="background-color:var(--color-surface-container); color:var(--color-on-surface-variant)">{{ cat.typeCode }}</code>
+                      </td>
+                      <td class="px-5 py-4">
+                        @if (cat.parentIssueType) {
+                          <div class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined" style="font-size:14px; color:var(--color-outline)">subdirectory_arrow_right</span>
+                            <span class="text-sm" style="color:var(--color-on-surface-variant)">{{ cat.parentIssueType.typeName }}</span>
+                          </div>
+                        } @else {
+                          <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background-color:rgba(99,102,241,.12); color:#4f46e5; border:1px solid rgba(99,102,241,.25)">Root</span>
+                        }
+                      </td>
+                      <td class="px-5 py-4">
+                        <div class="flex items-center gap-1.5">
+                          <span class="material-symbols-outlined" style="font-size:16px; color:var(--color-outline)">account_tree</span>
+                          <span class="text-sm font-semibold" style="color:var(--color-on-surface)">{{ cat.subIssueTypes?.length ?? 0 }}</span>
+                        </div>
+                      </td>
+                      <td class="px-5 py-4">
+                        @if (cat.slaPolicySummary) {
+                          <span class="text-xs" style="color:var(--color-on-surface-variant)">{{ cat.slaPolicySummary }}</span>
+                        } @else {
+                          <span class="text-xs italic" style="color:var(--color-outline)">—</span>
+                        }
+                      </td>
+                      <td class="px-5 py-4">
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold" [class]="cat.isActive ? 'status-active' : 'status-inactive'">
+                          <span class="h-1.5 w-1.5 rounded-full" [style]="cat.isActive ? 'background:#059669' : 'background:var(--color-outline)'"></span>
+                          {{ cat.isActive ? 'Active' : 'Inactive' }}
+                        </span>
+                      </td>
+                      <td class="px-5 py-4 text-right">
+                        <div class="row-actions flex items-center justify-end gap-1">
+                          <button (click)="openAddChildModal(cat)" class="rounded-lg p-1.5 transition-colors hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)" title="Add sub-category">
+                            <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                          </button>
+                          <button (click)="openEditModal(cat)" class="rounded-lg p-1.5 transition-colors hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)" title="Edit">
+                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                          </button>
+                          <button (click)="confirmDelete(cat)" class="rounded-lg p-1.5 transition-colors hover:bg-[var(--color-error-container)]" style="color:var(--color-error)" title="Delete">
+                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                  @if (categories().length === 0) {
+                    <tr>
+                      <td colspan="7" class="px-5 py-12 text-center text-sm" style="color:var(--color-on-surface-variant)">
+                        <span class="material-symbols-outlined block mx-auto mb-2" style="font-size:40px; opacity:0.4">category</span>
+                        No categories found.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <!-- Pagination -->
+            <div class="flex items-center justify-between border-t px-5 py-3.5" style="border-color:rgba(195,198,215,0.4); background-color:var(--color-surface-bright)">
+              <span class="text-xs" style="color:var(--color-on-surface-variant)">
+                Showing {{ (currentPage() - 1) * pageSize() + 1 }}–{{ Math.min(currentPage() * pageSize(), totalItems()) }} of {{ totalItems() }} categories
+              </span>
+              <div class="flex items-center gap-1">
+                <button (click)="changePage(currentPage() - 1)" [disabled]="currentPage() === 1"
+                  class="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-40"
+                  style="border-color:var(--color-outline-variant); color:var(--color-on-surface-variant)">
+                  <span class="material-symbols-outlined" style="font-size:18px">chevron_left</span>
+                </button>
+                @for (page of getPageArray(); track page) {
+                  <button (click)="changePage(page)"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg border font-semibold text-sm transition-colors"
+                    [style]="page === currentPage() ? 'background-color:var(--color-primary); border-color:var(--color-primary); color:white' : 'border-color:var(--color-outline-variant); color:var(--color-on-surface-variant)'">
+                    {{ page }}
+                  </button>
+                }
+                <button (click)="changePage(currentPage() + 1)" [disabled]="currentPage() === totalPages()"
+                  class="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-40"
+                  style="border-color:var(--color-outline-variant); color:var(--color-on-surface-variant)">
+                  <span class="material-symbols-outlined" style="font-size:18px">chevron_right</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ══ TREE VIEW ══ -->
+        @if (!isLoading() && !errorMessage() && viewMode() === 'tree') {
+          <div class="overflow-hidden rounded-2xl border p-6"
+            style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 4px 20px rgba(0,0,0,0.02)">
+            @if (rootCategories().length === 0) {
+              <div class="flex flex-col items-center gap-3 py-12" style="color:var(--color-on-surface-variant)">
+                <span class="material-symbols-outlined" style="font-size:40px; opacity:0.4">category</span>
+                <span class="text-sm">No categories found.</span>
+              </div>
+            }
+            @for (root of rootCategories(); track root.issueTypeId) {
+              <ng-container *ngTemplateOutlet="treeNode; context:{ cat: root, depth: 0 }"></ng-container>
+            }
+          </div>
+          <ng-template #treeNode let-cat="cat" let-depth="depth">
+            <div [style.margin-left.px]="depth * 24" class="mb-1">
+              <div class="group flex items-center gap-3 rounded-xl px-4 py-3 transition-all hover:bg-[var(--color-surface-container)]">
+                @if (cat.subIssueTypes && cat.subIssueTypes.length > 0) {
+                  <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-outline)">arrow_drop_down</span>
+                } @else {
+                  <span style="width:18px; display:inline-block"></span>
+                }
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style="background-color:var(--color-primary-container); color:var(--color-on-primary-container)">
+                  <span class="material-symbols-outlined" style="font-size:16px">{{ cat.iconUrl || 'category' }}</span>
+                </div>
+                <div class="flex flex-1 items-center gap-3 min-w-0">
+                  <span class="font-semibold text-sm truncate" style="color:var(--color-on-background)">{{ cat.typeName }}</span>
+                  <code class="rounded px-1.5 py-0.5 text-[11px] font-mono shrink-0" style="background-color:var(--color-surface-container); color:var(--color-on-surface-variant)">{{ cat.typeCode }}</code>
+                  @if (!cat.parentIssueTypeId) {
+                    <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0" style="background-color:rgba(99,102,241,.12); color:#4f46e5; border:1px solid rgba(99,102,241,.25)">Root</span>
+                  }
+                  @if (cat.subIssueTypes && cat.subIssueTypes.length > 0) {
+                    <span class="text-xs shrink-0" style="color:var(--color-on-surface-variant)">{{ cat.subIssueTypes.length }} sub-types</span>
+                  }
+                </div>
+                <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0" [class]="cat.isActive ? 'status-active' : 'status-inactive'">
+                  <span class="h-1 w-1 rounded-full" [style]="cat.isActive ? 'background:#059669' : 'background:var(--color-outline)'"></span>
+                  {{ cat.isActive ? 'Active' : 'Inactive' }}
+                </span>
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <button (click)="openAddChildModal(cat)" class="rounded-lg p-1 hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)" title="Add sub-category">
+                    <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                  </button>
+                  <button (click)="openEditModal(cat)" class="rounded-lg p-1 hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)">
+                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                  </button>
+                  <button (click)="confirmDelete(cat)" class="rounded-lg p-1 hover:bg-[var(--color-error-container)]" style="color:var(--color-error)">
+                    <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                  </button>
+                </div>
+              </div>
+              @if (cat.subIssueTypes && cat.subIssueTypes.length > 0) {
+                @for (child of cat.subIssueTypes; track child.issueTypeId) {
+                  <ng-container *ngTemplateOutlet="treeNode; context:{ cat: child, depth: depth + 1 }"></ng-container>
+                }
+              }
+            </div>
+          </ng-template>
+        }
+
+        <!-- ══ GRID VIEW ══ -->
+        @if (!isLoading() && !errorMessage() && viewMode() === 'grid') {
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            @for (cat of categories(); track cat.issueTypeId) {
+              <div class="group relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer"
+                style="background-color:var(--color-surface-container-lowest); border-color:rgba(195,198,215,0.35); box-shadow:0 4px 16px rgba(0,0,0,0.03)">
+                <div class="h-2 w-full" style="background:linear-gradient(90deg, var(--color-primary), var(--color-tertiary))"></div>
+                <div class="flex flex-1 flex-col gap-3 p-5">
+                  <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-3">
+                      <div class="flex h-10 w-10 items-center justify-center rounded-xl" style="background-color:var(--color-primary-container); color:var(--color-on-primary-container)">
+                        <span class="material-symbols-outlined" style="font-size:20px">{{ cat.iconUrl || 'category' }}</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-bold leading-tight" style="color:var(--color-on-background)">{{ cat.typeName }}</p>
+                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold mt-1" [class]="cat.isActive ? 'status-active' : 'status-inactive'">
+                          <span class="h-1 w-1 rounded-full" [style]="cat.isActive ? 'background:#059669' : 'background:var(--color-outline)'"></span>
+                          {{ cat.isActive ? 'Active' : 'Inactive' }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button (click)="openEditModal(cat)" class="rounded-lg p-1 hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)">
+                        <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                      </button>
+                      <button (click)="confirmDelete(cat)" class="rounded-lg p-1 hover:bg-[var(--color-error-container)]" style="color:var(--color-error)">
+                        <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <code class="rounded-lg px-2 py-0.5 text-[11px] font-mono" style="background-color:var(--color-surface-container); color:var(--color-on-surface-variant)">{{ cat.typeCode }}</code>
+                    @if (!cat.parentIssueTypeId) {
+                      <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background-color:rgba(99,102,241,.12); color:#4f46e5; border:1px solid rgba(99,102,241,.25)">Root</span>
+                    }
+                  </div>
+                  @if (cat.description) {
+                    <p class="text-xs line-clamp-2" style="color:var(--color-on-surface-variant)">{{ cat.description }}</p>
+                  }
+                  <div class="flex items-center justify-between rounded-xl px-3 py-2.5 text-xs" style="background-color:var(--color-surface-container)">
+                    <div class="text-center">
+                      <p class="font-bold text-base" style="color:var(--color-on-surface)">{{ cat.subIssueTypes?.length ?? 0 }}</p>
+                      <p style="color:var(--color-on-surface-variant)">Sub-types</p>
+                    </div>
+                    <div class="h-6 w-px" style="background-color:var(--color-outline-variant)"></div>
+                    <div class="text-center min-w-0 px-2">
+                      @if (cat.parentIssueType) {
+                        <p class="font-semibold text-xs truncate" style="color:var(--color-on-surface)">{{ cat.parentIssueType.typeName }}</p>
+                      } @else {
+                        <p class="text-xs italic" style="color:var(--color-outline)">Root</p>
+                      }
+                      <p style="color:var(--color-on-surface-variant)">Parent</p>
+                    </div>
+                    <div class="h-6 w-px" style="background-color:var(--color-outline-variant)"></div>
+                    <div class="text-center">
+                      @if (cat.slaPolicySummary) {
+                        <span class="material-symbols-outlined" style="font-size:16px; color:var(--color-primary)">schedule</span>
+                      } @else {
+                        <span class="material-symbols-outlined" style="font-size:16px; color:var(--color-outline)">schedule</span>
+                      }
+                      <p style="color:var(--color-on-surface-variant)">SLA</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+            @if (categories().length === 0) {
+              <div class="col-span-full flex flex-col items-center gap-3 py-16" style="color:var(--color-on-surface-variant)">
+                <span class="material-symbols-outlined" style="font-size:48px; opacity:0.4">category</span>
+                <span class="text-sm">No categories found.</span>
+              </div>
+            }
+          </div>
+        }
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Add/Edit Modal ══ -->
+@if (showModal()) {
+  <div class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" (click)="closeModal()">
+    <div class="w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl" style="background-color:var(--color-surface)" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between border-b px-6 py-4" style="border-color:var(--color-outline-variant)">
+        <div class="flex items-center gap-3">
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl" style="background-color:var(--color-primary-container)">
+            <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-on-primary-container)">
+              {{ editingId() ? 'edit' : 'add' }}
+            </span>
+          </div>
+          <h3 class="text-base font-bold" style="color:var(--color-on-surface)">
+            {{ editingId() ? 'Edit Category' : (parentForNew ? 'Add Sub-category of ' + parentForNew.typeName : 'Add New Category') }}
+          </h3>
+        </div>
+        <button (click)="closeModal()" class="rounded-xl p-2 transition-colors hover:bg-[var(--color-surface-container-high)]" style="color:var(--color-on-surface-variant)">
+          <span class="material-symbols-outlined" style="font-size:20px">close</span>
+        </button>
+      </div>
+      <div class="flex flex-col gap-4 px-6 py-5 max-h-[70vh] overflow-y-auto">
+        <!-- Parent Category -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Parent Category</label>
+          <select [(ngModel)]="formData.parentIssueTypeId" [disabled]="!!parentForNew"
+            class="rounded-xl border px-4 py-2.5 text-sm focus:outline-none appearance-none"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+            <option [ngValue]="null">— None (Root Category) —</option>
+            @for (root of allRootCategories(); track root.issueTypeId) {
+              @if (!editingId() || root.issueTypeId !== editingId()) {
+                <option [ngValue]="root.issueTypeId">{{ root.typeName }} ({{ root.typeCode }})</option>
+              }
+            }
+          </select>
+        </div>
+        <!-- Code -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Category Code <span style="color:var(--color-error)">*</span></label>
+          <input type="text" [(ngModel)]="formData.typeCode" placeholder="e.g. POTHOLE"
+            class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+        </div>
+        <!-- Name -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Category Name <span style="color:var(--color-error)">*</span></label>
+          <input type="text" [(ngModel)]="formData.typeName" placeholder="e.g. Potholes"
+            class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+        </div>
+        <!-- Icon -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Icon (Material Symbol)</label>
+          <div class="flex items-center gap-3">
+            <input type="text" [(ngModel)]="formData.iconUrl" placeholder="e.g. warning, water_drop, bolt"
+              class="flex-1 rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
+              style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background-color:var(--color-primary-container); color:var(--color-on-primary-container)">
+              <span class="material-symbols-outlined" style="font-size:20px">{{ formData.iconUrl || 'category' }}</span>
+            </div>
+          </div>
+          <span class="text-[11px]" style="color:var(--color-outline)">Enter a valid Material Symbols name. Preview updates as you type.</span>
+        </div>
+        <!-- Description -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Description</label>
+          <textarea [(ngModel)]="formData.description" rows="3" placeholder="Brief description of this category..."
+            class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2 resize-none"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"></textarea>
+        </div>
+        <!-- Status -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Status</label>
+          <select [(ngModel)]="formData.isActive"
+            class="rounded-xl border px-4 py-2.5 text-sm focus:outline-none appearance-none"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+            <option [ngValue]="true">Active</option>
+            <option [ngValue]="false">Inactive</option>
+          </select>
+        </div>
+        @if (modalError()) {
+          <div class="flex items-center gap-2 rounded-xl border px-4 py-3"
+            style="background-color:var(--color-error-container); border-color:rgba(186,26,26,.3)">
+            <span class="material-symbols-outlined" style="font-size:18px; color:var(--color-error)">error</span>
+            <span class="text-xs font-medium" style="color:var(--color-on-error-container)">{{ modalError() }}</span>
+          </div>
+        }
+      </div>
+      <div class="flex items-center justify-end gap-3 border-t px-6 py-4" style="border-color:var(--color-outline-variant)">
+        <button (click)="closeModal()"
+          class="rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--color-surface-container)]"
+          style="border-color:var(--color-outline-variant); color:var(--color-on-surface)">Cancel</button>
+        <button (click)="saveCategory()" [disabled]="isSaving()"
+          class="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+          style="background-color:var(--color-primary-container); color:var(--color-on-primary-container)">
+          @if (isSaving()) { <span class="material-symbols-outlined animate-spin" style="font-size:16px">progress_activity</span> }
+          {{ editingId() ? 'Save Changes' : 'Add Category' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Delete Confirm Modal ══ -->
+@if (deletingCategory) {
+  <div class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" (click)="deletingCategory = null">
+    <div class="w-full max-w-sm overflow-hidden rounded-2xl shadow-2xl" style="background-color:var(--color-surface)" (click)="$event.stopPropagation()">
+      <div class="p-6 flex flex-col items-center gap-4 text-center">
+        <div class="flex h-14 w-14 items-center justify-center rounded-full" style="background-color:var(--color-error-container)">
+          <span class="material-symbols-outlined" style="font-size:28px; color:var(--color-error)">delete_forever</span>
+        </div>
+        <div>
+          <h3 class="text-base font-bold" style="color:var(--color-on-surface)">Delete Category?</h3>
+          <p class="mt-1 text-sm" style="color:var(--color-on-surface-variant)">
+            <strong>{{ deletingCategory.typeName }}</strong> will be permanently removed.
+            @if ((deletingCategory.subIssueTypes?.length ?? 0) > 0) {
+              <br><span style="color:var(--color-error)" class="font-semibold">Warning: Has {{ deletingCategory.subIssueTypes!.length }} sub-type(s). Server may block deletion.</span>
+            }
+          </p>
+        </div>
+        @if (deleteError()) {
+          <div class="w-full rounded-xl border px-4 py-2.5 text-xs"
+            style="background-color:var(--color-error-container); border-color:rgba(186,26,26,.3); color:var(--color-on-error-container)">{{ deleteError() }}</div>
+        }
+        <div class="flex w-full gap-3">
+          <button (click)="deletingCategory = null; deleteError.set('')"
+            class="flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors hover:bg-[var(--color-surface-container)]"
+            style="border-color:var(--color-outline-variant); color:var(--color-on-surface)">Cancel</button>
+          <button (click)="deleteConfirmed()" [disabled]="deletingInProgress()"
+            class="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+            style="background-color:var(--color-error); color:white">
+            @if (deletingInProgress()) { <span class="material-symbols-outlined animate-spin" style="font-size:14px">progress_activity</span> }
+            @else { Delete }
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Toast ══ -->
+@if (toastMessage()) {
+  <div class="fixed bottom-6 right-6 z-[60] flex items-center gap-3 rounded-2xl px-5 py-3.5 shadow-2xl text-sm font-semibold"
+    [style]="toastSuccess() ? 'background-color:#059669;color:white' : 'background-color:var(--color-error);color:white'">
+    <span class="material-symbols-outlined" style="font-size:18px">{{ toastSuccess() ? 'check_circle' : 'error' }}</span>
+    {{ toastMessage() }}
+  </div>
+}

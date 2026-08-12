@@ -58,6 +58,7 @@ import { TranslateService } from '@ngx-translate/core'
         
          <a
           href="#"
+          (click)="goToDashboard($event)"
           class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50"
         >
           Dashboard
@@ -183,5 +184,12 @@ export class HeaderComponent {
   logout(): void {
     this.store.logout()
     void this.router.navigate(['/login'])
+  }
+
+  goToDashboard(event: Event): void {
+    event.preventDefault()
+    if (this.store.isAdmin()) {
+      void this.router.navigate(['/admin'])
+    }
   }
 }

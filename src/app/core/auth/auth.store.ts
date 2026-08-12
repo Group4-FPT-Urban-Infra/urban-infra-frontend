@@ -28,6 +28,7 @@ export class AuthStore {
   readonly status = this._status.asReadonly()
   readonly error = this._error.asReadonly()
   readonly isAuthenticated = computed(() => this._user() !== null)
+  readonly isAdmin = computed(() => this._user()?.roles?.includes('Admin') ?? false)
 
   // --- methods ---
   async login(payload: LoginPayload): Promise<void> {
