@@ -19,3 +19,24 @@ export const guestGuard: CanActivateFn = () => {
   const router = inject(Router)
   return store.isAuthenticated() ? router.createUrlTree(['/']) : true
 }
+
+/** Restricts access based on roles. */
+export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
+  return () => {
+    const store = inject(AuthStore)
+    const router = inject(Router)
+    
+    if (!store.isAuthenticated()) {
+      return router.createUrlTree(['/login'])
+    }
+    
+    const userRoles = store.user()?.roles || []
+    const hasRole = allowedRoles.some(role => userRoles.includes(role))
+    
+    if (!hasRole) {
+      return router.createUrlTree(['/'])
+    }
+    
+    return true
+  }
+}

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router'
-import { authGuard, guestGuard } from './core/auth/auth.guard'
+import { authGuard, guestGuard, roleGuard } from './core/auth/auth.guard'
 import { AppLayoutComponent } from './shared/layout/app-layout'
 
 export const routes: Routes = [
@@ -47,7 +47,47 @@ export const routes: Routes = [
       },
       {
         path: 'admin',
-        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/admin-dashboard.page').then((m) => m.AdminDashboardPage),
+      },
+      {
+        path: 'users',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/user-management.page').then((m) => m.UserManagementPage),
+      },
+      {
+        path: 'departments',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/department-management.page').then(
+            (m) => m.DepartmentManagementPage
+          ),
+      },
+      {
+        path: 'slas',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/slas-management.page').then(
+            (m) => m.SlasManagementPage
+          ),
+      },
+      {
+        path: 'incident-categories',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/incident-category-management.page').then(
+            (m) => m.IncidentCategoryManagementPage
+          ),
+      },
+      {
+        path: 'areas',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/area-management.page').then(
+            (m) => m.AreaManagementPage
+          ),
       },
       {
         path: 'profile',
