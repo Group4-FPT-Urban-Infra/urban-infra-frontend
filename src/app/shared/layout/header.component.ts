@@ -297,4 +297,11 @@ export class HeaderComponent {
     this.store.logout()
     void this.router.navigate(['/login'])
   }
+
+  goToDashboard(event: Event): void {
+    event.preventDefault()
+    if (this.store.isAdmin()) {
+      void this.router.navigate(['/admin'])
+    }
+  }
 }
