@@ -3,12 +3,12 @@ import { CommonModule } from '@angular/common'
 import { RouterLink, RouterLinkActive } from '@angular/router'
 
 interface NavMenuItem {
-  label: string
+  label : string
   icon: string
   route: string
   badge?: string
 }
-
+ 
 interface NavSection {
   title: string
   items: NavMenuItem[]
