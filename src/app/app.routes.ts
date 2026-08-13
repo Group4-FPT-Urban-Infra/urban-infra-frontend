@@ -93,6 +93,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'escalation-rules',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./escalation-rules-management.page').then(
+            (m) => m.EscalationRulesManagementPage
+          ),
+      },
+      {
         path: 'profile',
         canActivate: [authGuard],
         loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),

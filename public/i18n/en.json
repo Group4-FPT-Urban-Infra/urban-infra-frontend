@@ -6,7 +6,8 @@
   "nav": {
     "home": "Home",
     "users": "Users",
-    "logout": "Log out"
+    "logout": "Log out",
+    "escalationRules": "Escalation Rules"
   },
   "auth": {
     "login": "Log in",
@@ -34,6 +35,27 @@
     "retry": "Retry",
     "error": "Something went wrong",
     "notFound": "Page not found",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "none": "None",
+    "close": "Close",
+    "actions": "Actions"
+  },
+  "escalationRules": {
+    "title": "Escalation Rules",
+    "description": "Manage escalation rules for SLA policies.",
+    "create": "Create Rule",
+    "editTitle": "Edit Escalation Rule",
+    "createTitle": "Create Escalation Rule",
+    "emptyTitle": "No escalation rules found",
+    "emptyDescription": "Get started by creating a new escalation rule.",
+    "deleteConfirm": "Are you sure you want to delete this escalation rule?",
+    "slaPolicy": "SLA Policy",
+    "overdueMinutes": "Overdue (Minutes)",
+    "escalationLevel": "Escalation Level",
+    "targetDepartment": "Target Department",
+    "targetRole": "Target Role",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive"
   }
 }

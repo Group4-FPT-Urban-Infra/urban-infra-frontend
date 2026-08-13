@@ -18,13 +18,13 @@ Sign in with **`demo@example.com` / `password`** → open **Users**.
 
 ## Scripts
 
-| Script | Purpose |
-|---|---|
-| `npm start` | Dev server (`ng serve`) at :4200 |
-| `npm run build` | Production build to `dist/angular-base/browser` |
-| `npm run watch` | Rebuild on change (development config) |
-| `npm test` | Vitest via `ng test` |
-| `npm run format` / `format:check` | Prettier |
+| Script                            | Purpose                                         |
+| --------------------------------- | ----------------------------------------------- |
+| `npm start`                       | Dev server (`ng serve`) at :4200                |
+| `npm run build`                   | Production build to `dist/angular-base/browser` |
+| `npm run watch`                   | Rebuild on change (development config)          |
+| `npm test`                        | Vitest via `ng test`                            |
+| `npm run format` / `format:check` | Prettier                                        |
 
 ## Architecture
 
@@ -127,11 +127,11 @@ Angular uses `src/environments/`, swapped by `fileReplacements` in
 `angular.json` (dev build uses `environment.development.ts`). Access via
 `core/config/env.ts`.
 
-| Field | Dev | Prod |
-|---|---|---|
-| `apiBaseUrl` | `https://jsonplaceholder.typicode.com` | `/api` |
-| `defaultLocale` | `en` | `en` |
-| `supportedLocales` | `['en','vi']` | `['en','vi']` |
+| Field              | Dev                                    | Prod          |
+| ------------------ | -------------------------------------- | ------------- |
+| `apiBaseUrl`       | `https://jsonplaceholder.typicode.com` | `/api`        |
+| `defaultLocale`    | `en`                                   | `en`          |
+| `supportedLocales` | `['en','vi']`                          | `['en','vi']` |
 
 ## Adding ESLint
 

@@ -6,7 +6,8 @@
   "nav": {
     "home": "Trang chủ",
     "users": "Người dùng",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "escalationRules": "Quy tắc Leo thang"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -34,6 +35,27 @@
     "retry": "Thử lại",
     "error": "Đã có lỗi xảy ra",
     "notFound": "Không tìm thấy trang",
-    "backHome": "Về trang chủ"
+    "backHome": "Về trang chủ",
+    "none": "Không có",
+    "close": "Đóng",
+    "actions": "Hành động"
+  },
+  "escalationRules": {
+    "title": "Quy tắc Leo thang",
+    "description": "Quản lý các quy tắc leo thang cho các chính sách SLA.",
+    "create": "Tạo Quy tắc",
+    "editTitle": "Chỉnh sửa Quy tắc Leo thang",
+    "createTitle": "Tạo Quy tắc Leo thang mới",
+    "emptyTitle": "Không tìm thấy quy tắc leo thang nào",
+    "emptyDescription": "Bắt đầu bằng cách tạo một quy tắc leo thang mới.",
+    "deleteConfirm": "Bạn có chắc chắn muốn xóa quy tắc leo thang này không?",
+    "slaPolicy": "Chính sách SLA",
+    "overdueMinutes": "Quá hạn (phút)",
+    "escalationLevel": "Cấp độ Leo thang",
+    "targetDepartment": "Phòng ban Đích",
+    "targetRole": "Vai trò Đích",
+    "status": "Trạng thái",
+    "active": "Hoạt động",
+    "inactive": "Không hoạt động"
   }
 }
