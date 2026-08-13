@@ -1,12 +1,6 @@
-import { Component, EventEmitter, Output, inject, signal } from '@angular/core'
+import { Component, EventEmitter, OnInit, Output, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { IncidentStore } from './incident.store'
-import {
-  CATEGORY_LABELS,
-  IncidentCategory,
-  IncidentPriority,
-  PRIORITY_LABELS,
-} from './incident.types'
 
 @Component({
   selector: 'app-step-detail',
@@ -24,25 +18,25 @@ import {
 
       <!-- Form Layout -->
       <div class="flex flex-col gap-6">
-        <!-- Category Dropdown -->
+        <!-- Issue Type Dropdown -->
         <div class="flex flex-col gap-1">
           <label
             class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]"
-            for="category"
+            for="issueType"
           >
-            Primary Category <span class="text-[var(--color-error)]">*</span>
+            Incident Type <span class="text-[var(--color-error)]">*</span>
           </label>
           <div class="relative">
             <select
-              id="category"
-              [(ngModel)]="selectedCategory"
-              (ngModelChange)="onCategoryChange($event)"
-              name="category"
-              class="w-full appearance-none rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] py-[10px] pl-4 pr-10 text-sm text-[var(--color-on-surface)] transition-colors focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-fixed)] cursor-pointer"
+              id="issueType"
+              [(ngModel)]="selectedIssueTypeId"
+              (ngModelChange)="onIssueTypeChange($event)"
+              name="issueType"
+              class="w-full cursor-pointer appearance-none rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] py-[10px] pl-4 pr-10 text-sm text-[var(--color-on-surface)] transition-colors focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-fixed)]"
             >
-              <option [ngValue]="null" disabled>Select category...</option>
-              @for (category of categories; track category.value) {
-                <option [value]="category.value">{{ category.label }}</option>
+              <option [ngValue]="null" disabled>Select incident type...</option>
+              @for (type of store.issueTypes(); track type.issueTypeId) {
+                <option [value]="type.issueTypeId">{{ type.typeName }}</option>
               }
             </select>
             <span
@@ -53,23 +47,50 @@ import {
           </div>
         </div>
 
+        <!-- Title Input -->
+        <div class="flex flex-col gap-1">
+          <label
+            class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]"
+            for="title"
+          >
+            Title <span class="text-[var(--color-error)]">*</span>
+          </label>
+          <input
+            id="title"
+            type="text"
+            [(ngModel)]="title"
+            (ngModelChange)="onTitleChange($event)"
+            placeholder="Brief title describing the incident..."
+            maxlength="200"
+            class="w-full rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] px-4 py-[10px] text-sm text-[var(--color-on-surface)] placeholder:text-[var(--color-outline)] transition-colors focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-fixed)]"
+          />
+          <span class="mt-1 self-end text-[11px] text-[var(--color-on-surface-variant)]">
+            {{ title.length }} / 200 characters
+          </span>
+        </div>
+
         <!-- Priority Selection (Chips) -->
         <div class="flex flex-col gap-2">
           <label class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]">
-            Assessed Priority
+            Priority
           </label>
           <div class="flex flex-wrap gap-2">
-            @for (priority of priorities; track priority.value) {
+            @for (priority of store.priorities(); track priority.priorityId) {
               <button
                 type="button"
-                (click)="onPriorityChange(priority.value)"
+                (click)="onPriorityChange(priority.priorityId)"
                 class="px-4 py-2 rounded-full border text-[12px] font-medium transition-all"
-                [class]="getPriorityClasses(priority.value)"
+                [class]="getPriorityClasses(priority.priorityId)"
               >
-                {{ priority.label }}
+                {{ priority.priorityName }}
               </button>
             }
           </div>
+          @if (store.details().priorityId === null && prioritiesLoaded()) {
+            <p class="text-xs text-[var(--color-on-surface-variant)]">
+              Priority will be set to default if not selected.
+            </p>
+          }
         </div>
 
         <!-- Description Textarea -->
@@ -89,9 +110,18 @@ import {
             rows="5"
             class="w-full resize-none rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] px-4 py-3 text-sm text-[var(--color-on-surface)] placeholder:text-[var(--color-outline)] transition-colors focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-fixed)]"
           ></textarea>
-          <span class="mt-1 self-end text-[11px] text-[var(--color-on-surface-variant)]">
-            {{ description.length }} / 500 characters
-          </span>
+          <div class="mt-1 flex items-center justify-between">
+            @if (description.length > 0 && description.length < 10) {
+              <span class="text-xs text-[var(--color-error)]">
+                Minimum 10 characters required ({{ 10 - description.length }} more needed)
+              </span>
+            } @else {
+              <span></span>
+            }
+            <span class="text-[11px] text-[var(--color-on-surface-variant)]">
+              {{ description.length }} / 2000 characters
+            </span>
+          </div>
         </div>
       </div>
 
@@ -118,46 +148,61 @@ import {
     </div>
   `,
 })
-export class StepDetailComponent {
+export class StepDetailComponent implements OnInit {
   @Output() stepComplete = new EventEmitter<void>()
   @Output() goBackToLocation = new EventEmitter<void>()
 
   protected readonly store = inject(IncidentStore)
 
-  protected readonly categories = Object.entries(CATEGORY_LABELS).map(([value, label]) => ({
-    value: value as IncidentCategory,
-    label,
-  }))
-
-  protected readonly priorities = Object.entries(PRIORITY_LABELS).map(([value, label]) => ({
-    value: value as IncidentPriority,
-    label,
-  }))
-
-  protected selectedCategory: IncidentCategory | null = null
-  protected selectedPriority: IncidentPriority = 'medium'
+  protected selectedIssueTypeId: number | null = null
+  protected selectedPriorityId: number | null = null
+  protected title = ''
   protected description = ''
+  protected prioritiesLoaded = signal(false)
 
-  constructor() {
-    // Sync with store on component init
+  ngOnInit(): void {
+    // Sync with store
     const details = this.store.details()
-    this.selectedCategory = details.category
-    this.selectedPriority = details.priority
+    this.selectedIssueTypeId = details.issueTypeId
+    this.selectedPriorityId = details.priorityId
+    this.title = details.title
     this.description = details.description
+
+    // Mark priorities as loaded if available
+    if (this.store.priorities().length > 0) {
+      this.prioritiesLoaded.set(true)
+      // Set default priority if not set
+      if (!this.selectedPriorityId) {
+        const defaultPriority = this.store.priorities().find(p => p.severityRank === 1)
+        if (defaultPriority) {
+          this.selectedPriorityId = defaultPriority.priorityId
+          this.store.setPriorityId(defaultPriority.priorityId)
+        }
+      }
+    }
   }
 
   canProceed(): boolean {
-    return this.selectedCategory !== null && this.description.trim().length >= 10
+    return (
+      this.selectedIssueTypeId !== null &&
+      this.title.trim().length >= 5 &&
+      this.description.trim().length >= 10
+    )
   }
 
-  onCategoryChange(category: IncidentCategory): void {
-    this.selectedCategory = category
-    this.store.setCategory(category)
+  onIssueTypeChange(issueTypeId: number): void {
+    this.selectedIssueTypeId = issueTypeId
+    this.store.setIssueTypeId(issueTypeId)
   }
 
-  onPriorityChange(priority: IncidentPriority): void {
-    this.selectedPriority = priority
-    this.store.setPriority(priority)
+  onPriorityChange(priorityId: number): void {
+    this.selectedPriorityId = priorityId
+    this.store.setPriorityId(priorityId)
+  }
+
+  onTitleChange(title: string): void {
+    this.title = title
+    this.store.setTitle(title)
   }
 
   onDescriptionChange(description: string): void {
@@ -165,8 +210,8 @@ export class StepDetailComponent {
     this.store.setDescription(description)
   }
 
-  getPriorityClasses(priority: IncidentPriority): string {
-    const isSelected = this.selectedPriority === priority
+  getPriorityClasses(priorityId: number): string {
+    const isSelected = this.selectedPriorityId === priorityId
     const base =
       'border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)]'
 
@@ -174,12 +219,17 @@ export class StepDetailComponent {
       return base
     }
 
-    switch (priority) {
-      case 'low':
+    // Get priority info from store
+    const priority = this.store.priorities().find(p => p.priorityId === priorityId)
+    if (!priority) return base
+
+    // Style based on severity rank
+    switch (priority.severityRank) {
+      case 1: // Low
         return `${base} border-[var(--color-secondary)] bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]`
-      case 'medium':
+      case 2: // Medium
         return `${base} border-[var(--color-tertiary)] bg-[var(--color-tertiary-fixed)] text-[var(--color-on-tertiary-fixed)]`
-      case 'high':
+      case 3: // High
         return `${base} border-[var(--color-error)] bg-[var(--color-error-container)] text-[var(--color-on-error-container)]`
       default:
         return base
@@ -191,6 +241,8 @@ export class StepDetailComponent {
   }
 
   proceed(): void {
-    this.stepComplete.emit()
+    if (this.canProceed()) {
+      this.stepComplete.emit()
+    }
   }
 }
