@@ -1,8 +1,10 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core'
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, inject, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { Router, RouterLink, RouterLinkActive } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
 import { TranslateService } from '@ngx-translate/core'
+import { NotificationService } from '../../core/services/notification.service'
+import { NotificationItem } from '../../core/models/notification.model'
 
 @Component({
   selector: 'app-header',
@@ -168,17 +170,96 @@ import { TranslateService } from '@ngx-translate/core'
       </div>
 
       <!-- Right: Actions + Avatar -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 relative">
         <!-- Notifications -->
-        <button
-          class="rounded-full p-2 text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50"
-          title="Notifications"
-          type="button"
-        >
-          <span class="material-symbols-outlined text-[22px]" aria-hidden="true"
-            >notifications</span
+        <div class="relative">
+          <button
+            (click)="toggleNotificationsDropdown()"
+            class="relative rounded-full p-2 text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50 focus:outline-none"
+            title="Notifications"
+            type="button"
           >
-        </button>
+            <span class="material-symbols-outlined text-[22px]" aria-hidden="true"
+              >notifications</span
+            >
+            @if (unreadNotifications().length > 0) {
+              <span
+                class="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow"
+              >
+                {{ unreadNotifications().length > 99 ? '99+' : unreadNotifications().length }}
+              </span>
+            }
+          </button>
+
+          <!-- Notifications Dropdown Panel -->
+          @if (showDropdown()) {
+            <div
+              class="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden"
+            >
+              <!-- Header -->
+              <div class="flex items-center justify-between border-b border-[var(--color-outline-variant)] px-4 py-3 bg-[var(--color-surface-container)]">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-[var(--color-on-surface)]">Thông báo</span>
+                  @if (unreadNotifications().length > 0) {
+                    <span class="rounded-full bg-[var(--color-primary-container)] px-2 py-0.5 text-xs font-medium text-[var(--color-on-primary-container)]">
+                      {{ unreadNotifications().length }} mới
+                    </span>
+                  }
+                </div>
+                @if (unreadNotifications().length > 0) {
+                  <button
+                    (click)="markAllAsRead()"
+                    class="text-xs text-[var(--color-primary)] hover:underline font-medium"
+                    type="button"
+                  >
+                    Đánh dấu tất cả đã đọc
+                  </button>
+                }
+              </div>
+
+              <!-- List -->
+              <div class="max-h-80 overflow-y-auto divide-y divide-[var(--color-outline-variant)]/50">
+                @if (unreadNotifications().length === 0) {
+                  <div class="p-6 text-center text-sm text-[var(--color-on-surface-variant)]">
+                    <span class="material-symbols-outlined text-3xl mb-1 text-[var(--color-outline)]">notifications_off</span>
+                    <p>Không có thông báo chưa đọc</p>
+                  </div>
+                } @else {
+                  @for (item of unreadNotifications(); track item.id) {
+                    <div class="p-3 hover:bg-[var(--color-surface-variant)]/30 transition-colors flex gap-3 items-start group">
+                      <div class="mt-0.5">
+                        @if (item.notificationType === 'ESCALATION') {
+                          <span class="material-symbols-outlined text-amber-500 text-xl">warning</span>
+                        } @else if (item.notificationType === 'ASSIGNMENT') {
+                          <span class="material-symbols-outlined text-blue-500 text-xl">assignment_ind</span>
+                        } @else {
+                          <span class="material-symbols-outlined text-emerald-500 text-xl">info</span>
+                        }
+                      </div>
+
+                      <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-[var(--color-on-surface)] truncate">{{ item.title }}</p>
+                        <p class="text-xs text-[var(--color-on-surface-variant)] mt-0.5 leading-snug line-clamp-2">{{ item.message }}</p>
+                        <span class="text-[10px] text-[var(--color-outline)] mt-1 block">
+                          {{ item.createdAt | date: 'short' }}
+                        </span>
+                      </div>
+
+                      <button
+                        (click)="markAsRead(item.id, $event)"
+                        class="text-[var(--color-outline)] hover:text-[var(--color-primary)] p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Đánh dấu đã đọc"
+                        type="button"
+                      >
+                        <span class="material-symbols-outlined text-base">check_circle</span>
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          }
+        </div>
 
         <!-- Help -->
         <button
@@ -255,14 +336,61 @@ import { TranslateService } from '@ngx-translate/core'
     </nav>
   `,
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   @Input() sidebarCollapsed = false
   @Output() toggleSidebar = new EventEmitter<void>()
 
   protected readonly store = inject(AuthStore)
   protected readonly translate = inject(TranslateService)
+  private readonly notificationService = inject(NotificationService)
   private readonly router = inject(Router)
+  private readonly elementRef = inject(ElementRef)
+
   protected readonly locales = ['en', 'vi']
+  readonly unreadNotifications = signal<NotificationItem[]>([])
+  readonly showDropdown = signal<boolean>(false)
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    if (!this.elementRef.nativeElement.contains(event.target)) {
+      this.showDropdown.set(false)
+    }
+  }
+
+  ngOnInit(): void {
+    this.loadUnreadNotifications()
+  }
+
+  loadUnreadNotifications(): void {
+    const userId = this.store.user()?.id
+    this.notificationService.getUnreadNotifications(userId).subscribe({
+      next: (items) => this.unreadNotifications.set(items || []),
+      error: () => this.unreadNotifications.set([]),
+    })
+  }
+
+  toggleNotificationsDropdown(): void {
+    this.showDropdown.update((v) => !v)
+  }
+
+  markAsRead(id: number, event: Event): void {
+    event.stopPropagation()
+    const userId = this.store.user()?.id
+    this.notificationService.markAsRead(id, userId).subscribe({
+      next: () => {
+        this.unreadNotifications.update((list) => list.filter((n) => n.id !== id))
+      },
+    })
+  }
+
+  markAllAsRead(): void {
+    const userId = this.store.user()?.id
+    this.notificationService.markAllAsRead(userId).subscribe({
+      next: () => {
+        this.unreadNotifications.set([])
+      },
+    })
+  }
 
   getUserRole(): string {
     const user = this.store.user()
