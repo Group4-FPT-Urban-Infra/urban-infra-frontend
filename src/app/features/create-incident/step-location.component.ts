@@ -1,10 +1,11 @@
-import { Component, EventEmitter, Output, inject, signal } from '@angular/core'
+import { Component, EventEmitter, OnInit, Output, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { MapPickerComponent } from '../../shared/components/map-picker/map-picker.component'
 import { IncidentStore } from './incident.store'
 
 @Component({
   selector: 'app-step-location',
-  imports: [FormsModule],
+  imports: [FormsModule, MapPickerComponent],
   template: `
     <div class="flex flex-col gap-6">
       <div class="mb-2">
@@ -16,55 +17,54 @@ import { IncidentStore } from './incident.store'
         </p>
       </div>
 
+      <!-- Area Dropdown -->
+      <div class="flex flex-col gap-1">
+        <label
+          class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]"
+          for="area"
+        >
+          Area <span class="text-[var(--color-error)]">*</span>
+        </label>
+        <div class="relative">
+          <select
+            id="area"
+            [(ngModel)]="selectedAreaId"
+            (ngModelChange)="onAreaChange($event)"
+            name="area"
+            class="w-full cursor-pointer appearance-none rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] py-[10px] pl-4 pr-10 text-sm text-[var(--color-on-surface)] transition-colors focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-fixed)]"
+          >
+            <option [ngValue]="null" disabled>Select area...</option>
+            @for (area of store.areas(); track area.areaId) {
+              <option [value]="area.areaId">{{ area.areaName }}</option>
+            }
+          </select>
+          <span
+            class="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-on-surface-variant)]"
+          >
+            expand_more
+          </span>
+        </div>
+      </div>
+
       <!-- Map Container -->
       <div
-        class="relative flex h-[300px] flex-col overflow-hidden rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-dim)]"
+        class="relative overflow-hidden rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-dim)]"
+        style="height: 350px;"
       >
         @if (isLoadingLocation()) {
-          <div class="flex flex-1 flex-col items-center justify-center gap-3">
+          <div class="flex h-full w-full flex-col items-center justify-center gap-3">
             <span class="material-symbols-outlined animate-spin text-4xl text-[var(--color-primary)]">
               progress_activity
             </span>
             <p class="text-sm text-[var(--color-on-surface-variant)]">Getting your location...</p>
           </div>
-        } @else if (store.location()) {
-          <div class="flex flex-1 flex-col items-center justify-center gap-3 bg-[var(--color-surface-dim)]">
-            <div
-              class="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-primary-container)]"
-            >
-              <span class="material-symbols-outlined icon-filled text-2xl text-[var(--color-on-primary-container)]">
-                location_on
-              </span>
-            </div>
-            <p class="text-sm font-medium text-[var(--color-on-surface)]">
-              {{ store.location()!.address || 'Location selected' }}
-            </p>
-            @if (store.location()!.latitude && store.location()!.longitude) {
-              <p class="text-xs text-[var(--color-on-surface-variant)]">
-                {{ store.location()!.latitude.toFixed(6) }}, {{ store.location()!.longitude.toFixed(6) }}
-              </p>
-            }
-          </div>
         } @else {
-          <div class="flex flex-1 flex-col items-center justify-center gap-4">
-            <div
-              class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-container-high)]"
-            >
-              <span class="material-symbols-outlined text-4xl text-[var(--color-on-surface-variant)]">
-                my_location
-              </span>
-            </div>
-            <p class="text-sm text-[var(--color-on-surface-variant)]">
-              Tap the button below to detect your current location
-            </p>
-          </div>
+          <app-map-picker
+            [initialLocation]="store.location() ? { latitude: store.location()!.latitude, longitude: store.location()!.longitude } : null"
+            (locationSelected)="onLocationSelected($event)"
+            (locationCleared)="onLocationCleared()"
+          />
         }
-
-        <!-- Map placeholder - Replace with actual map component (Leaflet/OpenLayers) -->
-        <div
-          class="pointer-events-none absolute inset-0 opacity-20"
-          style="background-image: url('/civic_map_preview.jpg'); background-size: cover; background-position: center;"
-        ></div>
       </div>
 
       <!-- Action Buttons -->
@@ -82,21 +82,22 @@ import { IncidentStore } from './incident.store'
         </button>
         <button
           type="button"
-          (click)="openMapPicker()"
-          class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] px-4 py-3 text-sm font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container)]"
+          (click)="centerToArea()"
+          [disabled]="!selectedAreaId"
+          class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] px-4 py-3 text-sm font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-60"
         >
           <span class="material-symbols-outlined text-xl">edit_location</span>
-          Pick on Map
+          Center to Area
         </button>
       </div>
 
-      <!-- Manual Address Entry -->
+      <!-- Manual Address Entry (Optional) -->
       <div class="flex flex-col gap-2">
         <label
           class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]"
           for="address"
         >
-          Or enter address manually
+          Enter address (optional)
         </label>
         <div class="relative">
           <span
@@ -114,11 +115,17 @@ import { IncidentStore } from './incident.store'
         </div>
       </div>
 
+      <!-- Validation Error -->
+      @if (showAreaError()) {
+        <p class="text-xs text-[var(--color-error)]">
+          Please select an area and pin a location on the map before continuing.
+        </p>
+      }
+
       <!-- Continue Button -->
       <button
         type="button"
         (click)="proceed()"
-        [disabled]="!store.canProceedFromLocation() && !manualAddress"
         class="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-[var(--color-on-primary)] shadow-sm transition-colors hover:bg-[var(--color-on-primary-fixed-variant)] disabled:opacity-60 disabled:cursor-not-allowed"
       >
         Continue to Details
@@ -127,12 +134,37 @@ import { IncidentStore } from './incident.store'
     </div>
   `,
 })
-export class StepLocationComponent {
+export class StepLocationComponent implements OnInit {
   @Output() stepComplete = new EventEmitter<void>()
 
   protected readonly store = inject(IncidentStore)
   protected isLoadingLocation = signal(false)
   protected manualAddress = ''
+  protected selectedAreaId: number | null = null
+  protected showAreaError = signal(false)
+
+  ngOnInit(): void {
+    this.selectedAreaId = this.store.details().areaId
+    if (this.store.location()) {
+      this.manualAddress = this.store.location()!.address || ''
+    }
+  }
+
+  onAreaChange(areaId: number): void {
+    this.selectedAreaId = areaId
+    this.store.setAreaId(areaId)
+    this.showAreaError.set(false)
+  }
+
+  onLocationSelected(location: { latitude: number; longitude: number; address: string }): void {
+    this.store.setLocation(location)
+    this.manualAddress = location.address
+    this.showAreaError.set(false)
+  }
+
+  onLocationCleared(): void {
+    // Optionally handle location cleared
+  }
 
   getCurrentLocation(): void {
     if (!navigator.geolocation) {
@@ -163,22 +195,33 @@ export class StepLocationComponent {
     )
   }
 
-  openMapPicker(): void {
-    this.store.setLocation({
-      latitude: 10.7829,
-      longitude: 106.7016,
-      address: 'Nguyen Hue Walking Street, District 1, HCMC',
-    })
+  centerToArea(): void {
+    // This would typically use the area's centroid from the API
+    // For now, we'll just show a placeholder message
+    if (this.selectedAreaId) {
+      const area = this.store.areas().find(a => a.areaId === this.selectedAreaId)
+      if (area && area.areaType) {
+        // Placeholder - in real implementation, use area centroid from API
+        console.log('Center to area:', area.areaName)
+      }
+    }
   }
 
   proceed(): void {
-    if (this.manualAddress && !this.store.location()) {
+    if (!this.selectedAreaId || !this.store.location() || this.store.location()!.latitude === 0) {
+      this.showAreaError.set(true)
+      return
+    }
+
+    this.store.setAreaId(this.selectedAreaId)
+
+    if (this.manualAddress && this.store.location()!.address !== this.manualAddress) {
       this.store.setLocation({
-        latitude: 0,
-        longitude: 0,
+        ...this.store.location()!,
         address: this.manualAddress,
       })
     }
+
     this.stepComplete.emit()
   }
 }

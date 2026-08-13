@@ -145,7 +145,6 @@ import type { DuplicateIncident } from './incident.types'
   `,
 })
 export class StepDuplicationComponent {
-  @Output() skipDuplicates = new EventEmitter<void>()
   @Output() continueToPhotos = new EventEmitter<void>()
 
   protected readonly store = inject(IncidentStore)
@@ -163,6 +162,7 @@ export class StepDuplicationComponent {
 
   continueWithReport(): void {
     this.store.skipDuplicateCheck()
+    // Emit event to go to photos step
     this.continueToPhotos.emit()
   }
 }

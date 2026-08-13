@@ -2,20 +2,26 @@ import { Injectable, computed, inject, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { IncidentService } from './incident.service'
 import type {
+  AreaLookupItem,
   CreateIncidentPayload,
+  CreateIncidentResult,
   CreateIncidentState,
   DuplicateIncident,
   IncidentDetails,
+  IssueTypeLookupItem,
   LocationData,
   PhotoData,
+  PriorityLookupItem,
 } from './incident.types'
 
 const INITIAL_STATE: CreateIncidentState = {
   currentStep: 0,
   location: null,
   details: {
-    category: null,
-    priority: 'medium',
+    areaId: null,
+    issueTypeId: null,
+    priorityId: null,
+    title: '',
     description: '',
   },
   duplicateIncidents: [],
@@ -23,6 +29,9 @@ const INITIAL_STATE: CreateIncidentState = {
   isCheckingDuplicates: false,
   isSubmitting: false,
   skipDuplicates: false,
+  areas: [],
+  issueTypes: [],
+  priorities: [],
 }
 
 @Injectable({ providedIn: 'root' })
@@ -43,36 +52,89 @@ export class IncidentStore {
   readonly isSubmitting = computed(() => this._state().isSubmitting)
   readonly skipDuplicates = computed(() => this._state().skipDuplicates)
 
+  // Lookup data selectors
+  readonly areas = computed(() => this._state().areas)
+  readonly issueTypes = computed(() => this._state().issueTypes)
+  readonly priorities = computed(() => this._state().priorities)
+
   readonly canProceedFromLocation = computed(() => {
     const loc = this._state().location
-    return loc !== null && loc.latitude !== 0 && loc.longitude !== 0
+    const details = this._state().details
+    return (
+      loc !== null &&
+      loc.latitude !== 0 &&
+      loc.longitude !== 0 &&
+      details.areaId !== null
+    )
   })
 
   readonly canProceedFromDetails = computed(() => {
     const d = this._state().details
-    return d.category !== null && d.description.trim().length >= 10
+    return (
+      d.issueTypeId !== null &&
+      d.title.trim().length >= 5 &&
+      d.description.trim().length >= 10
+    )
   })
 
-  // --- Actions ---
+  // --- Lookup Data Actions ---
+  async loadAreas(): Promise<void> {
+    try {
+      const areas = await firstValueFrom(this.service.getAreas())
+      this._state.update((s) => ({ ...s, areas }))
+    } catch (error) {
+      console.error('Failed to load areas:', error)
+    }
+  }
+
+  async loadIssueTypes(): Promise<void> {
+    try {
+      const issueTypes = await firstValueFrom(this.service.getIssueTypes())
+      this._state.update((s) => ({ ...s, issueTypes }))
+    } catch (error) {
+      console.error('Failed to load issue types:', error)
+    }
+  }
+
+  async loadPriorities(): Promise<void> {
+    try {
+      const priorities = await firstValueFrom(this.service.getPriorities())
+      this._state.update((s) => ({ ...s, priorities }))
+    } catch (error) {
+      console.error('Failed to load priorities:', error)
+    }
+  }
+
+  // --- Field Setters ---
   setLocation(location: LocationData): void {
     this._state.update((s) => ({ ...s, location }))
   }
 
-  setDetails(details: IncidentDetails): void {
-    this._state.update((s) => ({ ...s, details }))
-  }
-
-  setCategory(category: IncidentDetails['category']): void {
+  setAreaId(areaId: number | null): void {
     this._state.update((s) => ({
       ...s,
-      details: { ...s.details, category },
+      details: { ...s.details, areaId },
     }))
   }
 
-  setPriority(priority: IncidentDetails['priority']): void {
+  setIssueTypeId(issueTypeId: number | null): void {
     this._state.update((s) => ({
       ...s,
-      details: { ...s.details, priority },
+      details: { ...s.details, issueTypeId },
+    }))
+  }
+
+  setPriorityId(priorityId: number | null): void {
+    this._state.update((s) => ({
+      ...s,
+      details: { ...s.details, priorityId },
+    }))
+  }
+
+  setTitle(title: string): void {
+    this._state.update((s) => ({
+      ...s,
+      details: { ...s.details, title },
     }))
   }
 
@@ -97,6 +159,7 @@ export class IncidentStore {
     }))
   }
 
+  // --- Navigation Actions ---
   nextStep(): void {
     this._state.update((s) => ({
       ...s,
@@ -117,14 +180,15 @@ export class IncidentStore {
     }
   }
 
+  // --- Duplicate Check Actions ---
   async checkDuplicates(): Promise<void> {
     const { location, details } = this._state()
-    if (!location || !details.category) return
+    if (!location || !details.issueTypeId) return
 
     this._state.update((s) => ({ ...s, isCheckingDuplicates: true }))
     try {
       const duplicates = await firstValueFrom(
-        this.service.checkDuplicates(location, details)
+        this.service.checkDuplicates(location, details.issueTypeId)
       )
       this._state.update((s) => ({
         ...s,
@@ -159,7 +223,8 @@ export class IncidentStore {
     }))
   }
 
-  async submitIncident(): Promise<{ success: boolean; incidentId?: string }> {
+  // --- Submit Action ---
+  async submitIncident(): Promise<CreateIncidentResult> {
     const { location, details, photos } = this._state()
     if (!location) return { success: false }
 
@@ -168,13 +233,19 @@ export class IncidentStore {
       const payload: CreateIncidentPayload = { location, details, photos }
       const result = await firstValueFrom(this.service.createIncident(payload))
       this._state.update((s) => ({ ...s, isSubmitting: false }))
-      return { success: true, incidentId: result.id }
-    } catch {
+      return {
+        success: true,
+        incidentId: String(result.id),
+        publicCode: result.publicCode,
+      }
+    } catch (error) {
+      console.error('Failed to create incident:', error)
       this._state.update((s) => ({ ...s, isSubmitting: false }))
       return { success: false }
     }
   }
 
+  // --- Reset ---
   reset(): void {
     this._state.set({ ...INITIAL_STATE })
   }
