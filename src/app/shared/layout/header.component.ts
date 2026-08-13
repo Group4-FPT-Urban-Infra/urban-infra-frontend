@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core'
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, inject, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { Router } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
@@ -243,10 +243,18 @@ export class HeaderComponent implements OnInit {
   protected readonly translate = inject(TranslateService)
   private readonly notificationService = inject(NotificationService)
   private readonly router = inject(Router)
+  private readonly elementRef = inject(ElementRef)
 
   protected readonly locales = ['en', 'vi']
   readonly unreadNotifications = signal<NotificationItem[]>([])
   readonly showDropdown = signal<boolean>(false)
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    if (!this.elementRef.nativeElement.contains(event.target)) {
+      this.showDropdown.set(false)
+    }
+  }
 
   ngOnInit(): void {
     this.loadUnreadNotifications()
