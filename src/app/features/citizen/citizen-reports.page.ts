@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { Router, RouterLink } from '@angular/router'
 import { DashboardService } from '../../core/services/dashboard.service'
-import type { IssueSummaryResponse, PagedResponse } from '../../core/services/dashboard.service'
+import type { IssueSummaryResponse, PagedResponse, IssueTypeLookup, IssueStatusLookup } from '../../core/services/dashboard.service'
 
 @Component({
   selector: 'app-citizen-reports',
@@ -56,90 +56,45 @@ import type { IssueSummaryResponse, PagedResponse } from '../../core/services/da
             >
               Status
             </h4>
-            <label class="group flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked
-                class="h-4 w-4 rounded border-[var(--color-outline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                (change)="onFilterChange()"
-              />
-              <span
-                class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors"
-              >
-                Open
-              </span>
-            </label>
-            <label class="group flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked
-                class="h-4 w-4 rounded border-[var(--color-outline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                (change)="onFilterChange()"
-              />
-              <span
-                class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors"
-              >
-                In Progress
-              </span>
-            </label>
-            <label class="group flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                class="h-4 w-4 rounded border-[var(--color-outline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                (change)="onFilterChange()"
-              />
-              <span
-                class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors"
-              >
-                Resolved
-              </span>
-            </label>
+            @for (status of issueStatuses(); track status.statusId) {
+              <label class="group flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  [checked]="selectedStatusIds().includes(status.statusId)"
+                  (change)="onStatusToggle(status.statusId, $event)"
+                  class="h-4 w-4 rounded border-[var(--color-outline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                />
+                <span
+                  class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors"
+                >
+                  {{ status.statusName }}
+                </span>
+              </label>
+            }
           </div>
 
-          <!-- Category Filter -->
+          <!-- Type Filter -->
           <div class="flex flex-col gap-2 border-t border-[var(--color-outline-variant)] pt-4">
             <h4
               class="text-[12px] font-medium uppercase tracking-wider text-[var(--color-on-surface-variant)]"
             >
-              Category
+              Type
             </h4>
-            <label class="group flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked
-                class="h-4 w-4 rounded border-[var(--color-outline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                (change)="onFilterChange()"
-              />
-              <span
-                class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors"
-              >
-                Infrastructure
-              </span>
-            </label>
-            <label class="group flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                class="h-4 w-4 rounded border-[var(--color-outline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                (change)="onFilterChange()"
-              />
-              <span
-                class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors"
-              >
-                Utilities
-              </span>
-            </label>
-            <label class="group flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                class="h-4 w-4 rounded border-[var(--color-outline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                (change)="onFilterChange()"
-              />
-              <span
-                class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors"
-              >
-                Sanitation
-              </span>
-            </label>
+            @for (type of issueTypes(); track type.issueTypeId) {
+              <label class="group flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  [checked]="selectedTypeIds().includes(type.issueTypeId)"
+                  (change)="onTypeToggle(type.issueTypeId, $event)"
+                  class="h-4 w-4 rounded border-[var(--color-outline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                />
+                <span
+                  class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors"
+                >
+                  {{ type.typeName }}
+                </span>
+              </label>
+            }
           </div>
         </aside>
 
@@ -290,8 +245,57 @@ export class CitizenReportsComponent implements OnInit {
   totalItems = signal(0)
   searchQuery = ''
 
+  // Filter data from API
+  issueStatuses = signal<IssueStatusLookup[]>([])
+  issueTypes = signal<IssueTypeLookup[]>([])
+  selectedStatusIds = signal<number[]>([])
+  selectedTypeIds = signal<number[]>([])
+
   ngOnInit(): void {
+    this.loadFilterData()
     this.loadIssues()
+  }
+
+  loadFilterData(): void {
+    // Load issue statuses
+    this.dashboardService.getIssueStatuses().subscribe({
+      next: (statuses) => {
+        this.issueStatuses.set(statuses)
+        // Select all by default
+        this.selectedStatusIds.set(statuses.map(s => s.statusId))
+      }
+    })
+
+    // Load issue types
+    this.dashboardService.getIssueTypes().subscribe({
+      next: (types) => {
+        this.issueTypes.set(types)
+        // Select all by default
+        this.selectedTypeIds.set(types.map(t => t.issueTypeId))
+      }
+    })
+  }
+
+  onStatusToggle(statusId: number, event: Event): void {
+    const checkbox = event.target as HTMLInputElement
+    const current = this.selectedStatusIds()
+    if (checkbox.checked) {
+      this.selectedStatusIds.set([...current, statusId])
+    } else {
+      this.selectedStatusIds.set(current.filter(id => id !== statusId))
+    }
+    this.onFilterChange()
+  }
+
+  onTypeToggle(typeId: number, event: Event): void {
+    const checkbox = event.target as HTMLInputElement
+    const current = this.selectedTypeIds()
+    if (checkbox.checked) {
+      this.selectedTypeIds.set([...current, typeId])
+    } else {
+      this.selectedTypeIds.set(current.filter(id => id !== typeId))
+    }
+    this.onFilterChange()
   }
 
   loadIssues(page = 1): void {
@@ -301,12 +305,38 @@ export class CitizenReportsComponent implements OnInit {
     // For now, load from latest issues endpoint
     this.dashboardService.getLatestIssues(100).subscribe({
       next: (issues) => {
+        // Apply client-side filters
+        let filtered = issues
+
+        // Filter by selected status IDs
+        if (this.selectedStatusIds().length > 0 && this.selectedStatusIds().length < this.issueStatuses().length) {
+          filtered = filtered.filter(issue =>
+            this.selectedStatusIds().includes(issue.status.id)
+          )
+        }
+
+        // Filter by selected type IDs
+        if (this.selectedTypeIds().length > 0 && this.selectedTypeIds().length < this.issueTypes().length) {
+          filtered = filtered.filter(issue =>
+            this.selectedTypeIds().includes(issue.issueType.id)
+          )
+        }
+
+        // Apply search
+        if (this.searchQuery.trim()) {
+          const query = this.searchQuery.toLowerCase()
+          filtered = filtered.filter(issue =>
+            issue.title.toLowerCase().includes(query) ||
+            issue.publicCode.toLowerCase().includes(query)
+          )
+        }
+
         // Apply pagination
         const start = (page - 1) * this.pageSize
         const end = start + this.pageSize
-        this.issues.set(issues.slice(start, end))
-        this.totalItems.set(issues.length)
-        this.totalPages.set(Math.ceil(issues.length / this.pageSize))
+        this.issues.set(filtered.slice(start, end))
+        this.totalItems.set(filtered.length)
+        this.totalPages.set(Math.ceil(filtered.length / this.pageSize))
         this.isLoading.set(false)
       },
       error: () => {
@@ -317,7 +347,6 @@ export class CitizenReportsComponent implements OnInit {
   }
 
   onSearch(): void {
-    // Implement search filter
     this.loadIssues(1)
   }
 

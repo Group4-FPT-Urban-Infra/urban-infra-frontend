@@ -21,6 +21,18 @@ export class HomeStore {
   readonly isLoadingNearby = signal(false)
   readonly error = signal<string | null>(null)
 
+  // Computed: issues at the same location as selected issue
+  readonly issuesAtSelectedLocation = computed(() => {
+    const selected = this.selectedIssue()
+    if (!selected) return []
+    const issues = this.nearbyIssues()
+    return issues.filter(
+      (i) =>
+        i.latitude.toFixed(5) === selected.latitude.toFixed(5) &&
+        i.longitude.toFixed(5) === selected.longitude.toFixed(5)
+    )
+  })
+
   // Computed values
   readonly activeIssues = computed(() => this.stats()?.activeIssuesCount ?? 0)
   readonly resolvedThisWeek = computed(() => this.stats()?.resolvedThisWeekCount ?? 0)
@@ -74,7 +86,7 @@ export class HomeStore {
     })
   }
 
-  loadNearbyIssues(lat: number, lng: number, radiusMeters = 2000): void {
+  loadNearbyIssues(lat: number, lng: number, radiusMeters = 20000): void {
     this.currentLocation.set({ lat, lng })
     this.isLoadingNearby.set(true)
 

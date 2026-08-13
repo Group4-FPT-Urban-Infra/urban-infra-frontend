@@ -2,6 +2,7 @@ import { Component, inject, OnInit, OnDestroy, signal, PLATFORM_ID, effect } fro
 import { isPlatformBrowser } from '@angular/common'
 import { Router } from '@angular/router'
 import { HomeStore } from './home.store'
+import { NearbyIssueResponse } from '../../core/services/dashboard.service'
 
 @Component({
   selector: 'app-home-page',
@@ -20,6 +21,17 @@ import { HomeStore } from './home.store'
         width: 100%;
         height: 100%;
         background-color: var(--color-surface-dim);
+        z-index: 1;
+      }
+      /* Ensure Leaflet popups appear below the modal (modal is z-50) */
+      .leaflet-popup {
+        z-index: 40 !important;
+      }
+      .leaflet-popup-content-wrapper {
+        z-index: 40 !important;
+      }
+      .leaflet-container {
+        z-index: 1 !important;
       }
     `,
   ],
@@ -334,11 +346,11 @@ import { HomeStore } from './home.store'
         (click)="closeModal($event)"
       >
         <div
-          class="max-w-lg w-full rounded-2xl bg-[var(--color-surface)] shadow-2xl overflow-hidden"
+          class="max-w-lg w-full rounded-2xl bg-[var(--color-surface)] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
           (click)="$event.stopPropagation()"
         >
           <!-- Image header -->
-          <div class="relative h-48 bg-[var(--color-surface-dim)]">
+          <div class="relative h-48 bg-[var(--color-surface-dim)] shrink-0">
             @if (store.getImageUrl(store.selectedIssue()!.thumbnailUrl)) {
               <img
                 [src]="store.getImageUrl(store.selectedIssue()!.thumbnailUrl)!"
@@ -352,7 +364,7 @@ import { HomeStore } from './home.store'
             }
             <button
               (click)="store.closeModal()"
-              class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+              class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 z-10"
             >
               <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
@@ -365,7 +377,7 @@ import { HomeStore } from './home.store'
           </div>
 
           <!-- Content -->
-          <div class="p-6">
+          <div class="p-6 overflow-y-auto">
             <div class="mb-4">
               <p class="mb-1 text-xs text-[var(--color-primary)]">
                 {{ store.selectedIssue()!.publicCode }}
@@ -393,7 +405,7 @@ import { HomeStore } from './home.store'
               </span>
               <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[16px]">schedule</span>
-                {{ store.formatTimeAgo(store.selectedIssue()!.reportedAt) }}
+                {{ formatTimeAgo(store.selectedIssue()!.reportedAt) }}
               </span>
               @if (store.selectedIssue()!.distanceMeters) {
                 <span class="flex items-center gap-1">
@@ -402,6 +414,92 @@ import { HomeStore } from './home.store'
                 </span>
               }
             </div>
+
+            <!-- Multiple issues at location navigation -->
+            @if (store.issuesAtSelectedLocation().length > 1) {
+              <div class="mt-6 border-t border-[var(--color-outline-variant)] pt-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[var(--color-primary)]">location_on</span>
+                    <span class="text-sm font-medium text-[var(--color-on-surface)]">
+                      {{ store.issuesAtSelectedLocation().length }} incidents at this location
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-xs text-[var(--color-on-surface-variant)]">
+                      {{ store.issuesAtSelectedLocation().indexOf(store.selectedIssue()!) + 1 }} / {{ store.issuesAtSelectedLocation().length }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Navigation buttons -->
+                <div class="flex gap-2 mb-3">
+                  <button
+                    (click)="navigateIssue(-1)"
+                    [disabled]="store.issuesAtSelectedLocation().indexOf(store.selectedIssue()!) === 0"
+                    class="flex items-center gap-1 rounded-lg px-3 py-2 text-sm transition-colors disabled:opacity-40"
+                    [class]="store.issuesAtSelectedLocation().indexOf(store.selectedIssue()!) === 0
+                      ? 'bg-[var(--color-surface-container)] text-[var(--color-on-surface-variant)] cursor-not-allowed'
+                      : 'bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)] hover:bg-[var(--color-primary)]/20'"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                    Previous
+                  </button>
+                  <button
+                    (click)="navigateIssue(1)"
+                    [disabled]="store.issuesAtSelectedLocation().indexOf(store.selectedIssue()!) === store.issuesAtSelectedLocation().length - 1"
+                    class="flex items-center gap-1 rounded-lg px-3 py-2 text-sm transition-colors disabled:opacity-40"
+                    [class]="store.issuesAtSelectedLocation().indexOf(store.selectedIssue()!) === store.issuesAtSelectedLocation().length - 1
+                      ? 'bg-[var(--color-surface-container)] text-[var(--color-on-surface-variant)] cursor-not-allowed'
+                      : 'bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)] hover:bg-[var(--color-primary)]/20'"
+                  >
+                    Next
+                    <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                  </button>
+                </div>
+
+                <!-- Issue list -->
+                <div class="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                  @for (issue of store.issuesAtSelectedLocation(); track issue.id) {
+                    <div
+                      (click)="store.selectIssue(issue)"
+                      class="flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors"
+                      [class]="issue.id === store.selectedIssue()!.id
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary-container)]/30'
+                        : 'border-[var(--color-outline-variant)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-container)]'"
+                    >
+                      <div class="shrink-0">
+                        @if (store.getImageUrl(issue.thumbnailUrl)) {
+                          <img
+                            [src]="store.getImageUrl(issue.thumbnailUrl)!"
+                            [alt]="issue.title"
+                            class="h-10 w-10 rounded object-cover"
+                          />
+                        } @else {
+                          <div class="h-10 w-10 rounded bg-[var(--color-surface-dim)] flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[18px] text-[var(--color-outline)]">report</span>
+                          </div>
+                        }
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-[var(--color-on-surface)] truncate">
+                          {{ issue.title }}
+                        </p>
+                        <p class="text-xs text-[var(--color-on-surface-variant)]">
+                          {{ issue.issueType.name }} • {{ formatTimeAgo(issue.reportedAt) }}
+                        </p>
+                      </div>
+                      <span
+                        class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                        [class]="getStatusClass(issue.status.code)"
+                      >
+                        {{ issue.status.name }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -470,13 +568,24 @@ export class HomePage implements OnInit, OnDestroy {
     const mapContainer = document.getElementById('home-map')
     if (!mapContainer || !L) return
 
-    this.map = L.map('home-map').setView([this.defaultLocation.lat, this.defaultLocation.lng], 14)
+    this.map = L.map('home-map', { closePopupOnClick: false }).setView([this.defaultLocation.lat, this.defaultLocation.lng], 14)
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
+      language: 'en',
     }).addTo(this.map)
 
     this.mapReady = true
+
+    // Listen for custom events from popup clicks
+    window.addEventListener('selectIssue', ((event: CustomEvent) => {
+      const issueId = event.detail as number
+      const issues = this.store.nearbyIssues()
+      const issue = issues.find((i) => i.id === issueId)
+      if (issue) {
+        this.store.selectIssue(issue)
+      }
+    }) as EventListener)
 
     // Auto-detect user location
     this.requestLocationAndReload()
@@ -495,28 +604,91 @@ export class HomePage implements OnInit, OnDestroy {
     this.markers = []
 
     const issues = this.store.nearbyIssues()
+    // Group issues by coordinate (rounded to 5 decimal places for grouping)
+    const issueGroups = new Map<string, NearbyIssueResponse[]>()
     issues.forEach((issue) => {
-      // Green marker for issues
+      const key = `${issue.latitude.toFixed(5)},${issue.longitude.toFixed(5)}`
+      if (!issueGroups.has(key)) {
+        issueGroups.set(key, [])
+      }
+      issueGroups.get(key)!.push(issue)
+    })
+
+    issueGroups.forEach((groupIssues) => {
+      const firstIssue = groupIssues[0]
+      const markerColor = this.getMarkerColor(firstIssue.status.code)
+      const hasMultiple = groupIssues.length > 1
+
+      // Marker icon with count badge if multiple
+      const badgeHtml = hasMultiple
+        ? `<div style="position: absolute; top: -8px; right: -8px; background: #6750A4; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">${groupIssues.length}</div>`
+        : ''
+
       const icon = L.divIcon({
         className: 'custom-marker',
-        html: `<div style="background-color: #22c55e; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        html: `<div style="position: relative;">${badgeHtml}<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+        popupAnchor: [0, -10],
       })
 
-      const marker = L.marker([issue.latitude, issue.longitude], { icon })
-        .addTo(this.map)
-        .bindPopup(`
-          <div style="min-width: 150px;">
-            <strong>${issue.title}</strong><br/>
-            <span style="color: #666; font-size: 12px;">${issue.issueType.name}</span>
-          </div>
-        `)
+      const marker = L.marker([firstIssue.latitude, firstIssue.longitude], { icon })
 
-      marker.on('click', () => {
-        this.store.selectIssue(issue)
+      // Build popup content with list if multiple
+      // Popup only opens on long press, not regular click - modal handles clicks
+      if (hasMultiple) {
+        const listItems = groupIssues
+          .map(
+            (issue) =>
+              `<div class="issue-list-item" data-id="${issue.id}" style="cursor: pointer; padding: 6px 4px; border-bottom: 1px solid #eee; font-size: 12px;" ontouchstart="window.dispatchEvent(new CustomEvent('selectIssue', {detail: ${issue.id}}))" onclick="window.dispatchEvent(new CustomEvent('selectIssue', {detail: ${issue.id}}))">
+                <strong>${issue.title.substring(0, 30)}${issue.title.length > 30 ? '...' : ''}</strong><br/>
+                <span style="color: #666;">${issue.issueType.name} • ${issue.status.name}</span>
+              </div>`
+          )
+          .join('')
+        marker.bindPopup(
+          `<div style="min-width: 180px; max-height: 300px; overflow-y: auto;">
+            <div style="font-weight: bold; padding: 8px 4px; background: #f5f5f5; margin: -8px -8px 8px -8px;">${groupIssues.length} incidents here</div>
+            ${listItems}
+          </div>`,
+          { closeButton: true, autoPan: false }
+        )
+      }
+
+      // Click handler - show modal, not popup
+      marker.on('click', (e: any) => {
+        this.store.selectIssue(firstIssue)
+        // Close any open popup after a short delay
+        setTimeout(() => {
+          this.map.closePopup()
+        }, 100)
       })
 
+      // Long press to open popup with list
+      let longPressTimer: any
+      marker.on('mousedown', () => {
+        longPressTimer = setTimeout(() => {
+          if (hasMultiple) {
+            marker.openPopup()
+          }
+        }, 500)
+      })
+      marker.on('mouseup', () => clearTimeout(longPressTimer))
+      marker.on('touchstart', () => {
+        longPressTimer = setTimeout(() => {
+          if (hasMultiple) {
+            marker.openPopup()
+          }
+        }, 500)
+      })
+      marker.on('touchend', () => clearTimeout(longPressTimer))
+
+      // Double click to zoom in
+      marker.on('dblclick', () => {
+        this.map.setView([firstIssue.latitude, firstIssue.longitude], 16)
+      })
+
+      marker.addTo(this.map)
       this.markers.push(marker)
     })
 
@@ -564,6 +736,11 @@ export class HomePage implements OnInit, OnDestroy {
     this.currentLocationMarker = L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon })
       .addTo(this.map)
       .bindPopup('<strong>Vị trí của bạn</strong>')
+
+    // Ensure user location marker stays below issue markers (z-index offset)
+    if (this.currentLocationMarker.setZIndexOffset) {
+      this.currentLocationMarker.setZIndexOffset(-1000)
+    }
   }
 
   private getMarkerColor(statusCode: string): string {
@@ -588,7 +765,7 @@ export class HomePage implements OnInit, OnDestroy {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords
-        this.store.loadNearbyIssues(latitude, longitude, 2000) // 2km radius
+        this.store.loadNearbyIssues(latitude, longitude, 20000) // 20km radius
         if (this.map) {
           this.map.setView([latitude, longitude], 14)
         }
@@ -596,7 +773,7 @@ export class HomePage implements OnInit, OnDestroy {
       (error) => {
         console.error('Geolocation error:', error)
         // Fallback: load with default location
-        this.store.loadNearbyIssues(this.defaultLocation.lat, this.defaultLocation.lng, 2000)
+        this.store.loadNearbyIssues(this.defaultLocation.lat, this.defaultLocation.lng, 20000)
       }
     )
   }
@@ -605,12 +782,39 @@ export class HomePage implements OnInit, OnDestroy {
     this.store.selectIssue(issue)
     if (this.map) {
       this.map.setView([issue.latitude, issue.longitude], 16)
+      this.map.closePopup()
     }
-    // Find and open the corresponding marker popup
-    const markerIndex = this.store.nearbyIssues().findIndex((i) => i.id === issue.id)
-    if (markerIndex >= 0 && this.markers[markerIndex]) {
-      this.markers[markerIndex].openPopup()
+  }
+
+  navigateIssue(direction: number): void {
+    const issues = this.store.issuesAtSelectedLocation()
+    const current = this.store.selectedIssue()
+    if (!current || issues.length <= 1) return
+
+    const currentIndex = issues.findIndex((i) => i.id === current.id)
+    const newIndex = currentIndex + direction
+
+    if (newIndex >= 0 && newIndex < issues.length) {
+      this.store.selectIssue(issues[newIndex])
+      if (this.map) {
+        this.map.closePopup()
+      }
     }
+  }
+
+  formatTimeAgo(date: string): string {
+    const d = new Date(date)
+    const now = new Date()
+    const diffMs = now.getTime() - d.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins} min ago`
+    if (diffHours < 24) return `${diffHours} hr ago`
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    return d.toLocaleDateString()
   }
 
   closeModal(event: Event): void {
