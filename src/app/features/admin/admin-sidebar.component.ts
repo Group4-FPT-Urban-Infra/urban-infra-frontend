@@ -119,14 +119,6 @@ interface NavItem {
           <span class="material-symbols-outlined" style="font-size:20px">contact_support</span>
           Support
         </a>
-        <a
-          href="#"
-          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-[var(--color-error-container)]"
-          style="color: var(--color-error)"
-        >
-          <span class="material-symbols-outlined" style="font-size:20px">logout</span>
-          Logout
-        </a>
       </div>
 
       <!-- Hotline Card -->
@@ -142,8 +134,8 @@ export class AdminSidebarComponent {
 
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', route: '/admin', exact: true },
-    { label: 'Map View', icon: 'map', route: '/public-map' },
     { label: 'SLAs', icon: 'timer', route: '/slas' },
+    { label: 'Escalation Rules', icon: 'trending_up', route: '/escalation-rules' },
     { label: 'Areas', icon: 'location_on', route: '/areas' },
     { label: 'Departments', icon: 'account_balance', route: '/departments' },
     { label: 'Users', icon: 'group', route: '/users' },

@@ -131,7 +131,7 @@ export class IncidentCategoryManagementPage implements OnInit {
   }
 
   loadAllRoots(): void {
-    this.svc.search({ isRootOnly: true, pageSize: 200 }).subscribe({
+    this.svc.search({ isRootOnly: true, pageSize: 100 }).subscribe({
       next: (res) => {
         if (res.success && res.data) this.allRootCategories.set(res.data.items)
       },

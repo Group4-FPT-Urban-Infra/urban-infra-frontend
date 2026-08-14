@@ -77,6 +77,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'escalation-rules',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/escalation-rules-management.page').then(
+            (m) => m.EscalationRulesManagementPage
+          ),
+      },
+      {
         path: 'incident-categories',
         canActivate: [roleGuard(['Admin'])],
         loadComponent: () =>
