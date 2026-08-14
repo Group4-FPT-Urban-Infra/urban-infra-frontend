@@ -4,8 +4,20 @@ import { Observable } from 'rxjs'
 import type { AuthApiResponse, LoginPayload, RegisterPayload } from './auth.types'
 import { env } from '../config/env'
 
+export interface AuthUserProfile {
+  id: string
+  fullName: string
+  email: string
+  phoneNumber?: string
+  roles: string[]
+  departmentId?: number
+  isActive: boolean
+  createdAtUtc: string
+}
+
 /**
  * Auth API service — wraps the UrbanInfraSystem backend endpoints:
+ *   GET  /api/auth/me
  *   POST /api/auth/login
  *   POST /api/auth/register
  *   POST /api/auth/refresh-token
@@ -34,5 +46,9 @@ export class AuthService {
       { accessToken, refreshToken },
       { headers: { Authorization: `Bearer ${accessToken}` } },
     )
+  }
+
+  getMe(): Observable<AuthUserProfile> {
+    return this.http.get<AuthUserProfile>(`${this.base}/me`)
   }
 }

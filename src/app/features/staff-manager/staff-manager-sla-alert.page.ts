@@ -1,22 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
-
-interface BreachItem {
-  id: string
-  type: string
-  typeIcon: string
-  title: string
-  category: string
-  timeRemaining: string
-  target: string
-  isUrgent: boolean
-}
-
-interface AlertItem {
-  message: string
-  time: string
-  type: 'error' | 'warning' | 'info'
-}
+import { DepartmentManagerService } from '../../core/services/department-manager.service'
+import { SlaOverview, SlaNearDeadlineItem, SlaHistoryItem } from '../../core/services/department-manager.service'
 
 @Component({
   selector: 'app-staff-manager-sla-alert',
@@ -56,32 +41,37 @@ interface AlertItem {
               Approaching SLA Breach
             </h3>
             <span class="rounded-full bg-[var(--color-error-container)] px-3 py-1 text-[11px] font-medium text-[var(--color-on-error-container)]">
-              {{ breaches().length }} Active
+              {{ nearDeadline().length }} Active
             </span>
           </div>
           <div class="flex-1 overflow-y-auto pr-2">
-            @for (item of breaches(); track item.id) {
+            @for (item of nearDeadline(); track item.issueId) {
               <div class="group mb-3 flex cursor-pointer items-center justify-between rounded-lg border border-transparent p-4 transition-colors hover:border-[var(--color-outline-variant)] hover:bg-[var(--color-surface-container-low)]">
                 <div class="flex items-start gap-4">
                   <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-container)]">
-                    <span class="material-symbols-outlined text-[var(--color-on-surface-variant)]">{{ item.typeIcon }}</span>
+                    <span class="material-symbols-outlined text-[var(--color-on-surface-variant)]">report</span>
                   </div>
                   <div>
                     <h4 class="text-[16px] font-medium text-[var(--color-on-surface)] transition-colors group-hover:text-[var(--color-primary)]">
                       {{ item.title }}
                     </h4>
                     <p class="text-[14px] text-[var(--color-on-surface-variant)]">
-                      {{ item.id }} - {{ item.category }}
+                      {{ item.publicCode }} - {{ item.deadlineType }}
                     </p>
                   </div>
                 </div>
                 <div class="text-right">
-                  <div [class]="item.isUrgent ? 'text-[var(--color-error)]' : 'text-[var(--color-tertiary-container)]'"
+                  <div [class]="item.minutesRemaining < 30 ? 'text-[var(--color-error)]' : 'text-[var(--color-tertiary)]'"
                        class="text-[16px] font-medium">
-                    {{ item.timeRemaining }}
+                    {{ formatTimeRemaining(item.minutesRemaining) }}
                   </div>
-                  <p class="text-[14px] text-[var(--color-on-surface-variant)]">Target: {{ item.target }}</p>
+                  <p class="text-[14px] text-[var(--color-on-surface-variant)]">Priority: {{ item.priorityName }}</p>
                 </div>
+              </div>
+            } @empty {
+              <div class="flex flex-col items-center justify-center py-12 text-center">
+                <span class="material-symbols-outlined text-[48px] text-[var(--color-on-surface-variant)]">check_circle</span>
+                <p class="mt-4 text-[16px] text-[var(--color-on-surface-variant)]">No SLA breaches in the next 2 hours</p>
               </div>
             }
           </div>
@@ -92,29 +82,60 @@ interface AlertItem {
           <!-- Global Compliance Rate -->
           <div class="relative flex h-48 flex-col items-center justify-center overflow-hidden rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] p-6 shadow-sm">
             <div class="absolute inset-0 bg-gradient-to-br from-[var(--color-primary-fixed-dim)]/20 to-transparent"></div>
-            <h3 class="relative z-10 mb-2 text-[18px] font-semibold text-[var(--color-on-surface)]">Global Compliance</h3>
-            <div class="relative z-10 text-[36px] font-bold text-[var(--color-primary)]">94.2%</div>
+            <h3 class="relative z-10 mb-2 text-[18px] font-semibold text-[var(--color-on-surface)]">Monthly Compliance</h3>
+            <div class="relative z-10 text-[36px] font-bold" [class.text-[var(--color-primary)]]="(overview()?.resolutionRate ?? 0) >= 80" [class.text-[var(--color-error)]]="(overview()?.resolutionRate ?? 0) < 80">
+              {{ overview()?.resolutionRate ?? 0 | number:'1.0-1' }}%
+            </div>
             <p class="relative z-10 mt-2 flex items-center gap-1 text-[12px] font-medium text-[var(--color-secondary)]">
               <span class="material-symbols-outlined text-sm">trending_up</span>
-              +1.2% vs last week
+              {{ overview()?.resolvedOnTime ?? 0 }} resolved on time
             </p>
           </div>
 
-          <!-- Recent Alerts -->
-          <div class="flex flex-1 flex-col rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] p-6 shadow-sm">
-            <h3 class="mb-4 flex items-center gap-2 border-b border-[var(--color-outline-variant)] pb-4 text-[18px] font-semibold text-[var(--color-on-surface)]">
-              <span class="material-symbols-outlined text-[var(--color-primary)]">notifications_active</span>
-              Recent Alerts
+          <!-- Monthly Stats -->
+          <div class="flex flex-col rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] p-6 shadow-sm">
+            <h3 class="mb-4 border-b border-[var(--color-outline-variant)] pb-4 text-[18px] font-semibold text-[var(--color-on-surface)]">
+              This Month
             </h3>
             <div class="flex flex-col gap-4">
-              @for (alert of alerts(); track alert.message) {
-                <div class="flex gap-3">
-                  <span [class]="getAlertDotClass(alert.type)" class="mt-2 h-2 w-2 shrink-0 rounded-full"></span>
-                  <div>
-                    <p class="text-[14px] text-[var(--color-on-surface)]">{{ alert.message }}</p>
-                    <span class="text-[11px] text-[var(--color-on-surface-variant)]">{{ alert.time }}</span>
+              <div class="flex items-center justify-between">
+                <span class="text-[14px] text-[var(--color-on-surface-variant)]">Total Issues</span>
+                <span class="text-[16px] font-semibold text-[var(--color-on-surface)]">{{ overview()?.totalIssuesInMonth ?? 0 }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-[14px] text-[var(--color-on-surface-variant)]">Resolved On Time</span>
+                <span class="text-[16px] font-semibold text-[var(--color-primary)]">{{ overview()?.resolvedOnTime ?? 0 }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-[14px] text-[var(--color-on-surface-variant)]">Breached</span>
+                <span class="text-[16px] font-semibold text-[var(--color-error)]">{{ overview()?.breached ?? 0 }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-[14px] text-[var(--color-on-surface-variant)]">Avg Response</span>
+                <span class="text-[16px] font-semibold text-[var(--color-on-surface)]">{{ overview()?.avgResponseTimeMinutes ?? 0 }}m</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SLA History -->
+          <div class="flex flex-1 flex-col rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] p-6 shadow-sm">
+            <h3 class="mb-4 flex items-center gap-2 border-b border-[var(--color-outline-variant)] pb-4 text-[18px] font-semibold text-[var(--color-on-surface)]">
+              <span class="material-symbols-outlined text-[var(--color-primary)]">history</span>
+              SLA History
+            </h3>
+            <div class="flex flex-col gap-3">
+              @for (item of history(); track item.month) {
+                <div class="flex items-center justify-between rounded-lg bg-[var(--color-surface-container-low)] p-3">
+                  <span class="text-[14px] text-[var(--color-on-surface)]">{{ item.monthName }}</span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[12px] text-[var(--color-on-surface-variant)]">{{ item.totalIssues }} issues</span>
+                    <span class="rounded-full px-2 py-0.5 text-[11px] font-medium" [class.bg-[var(--color-primary-container)]]="item.resolutionRate >= 80" [class.text-[var(--color-on-primary-container)]]="item.resolutionRate >= 80" [class.bg-[var(--color-error-container)]]="item.resolutionRate < 80" [class.text-[var(--color-on-error-container)]]="item.resolutionRate < 80">
+                      {{ item.resolutionRate | number:'1.0-0' }}%
+                    </span>
                   </div>
                 </div>
+              } @empty {
+                <p class="text-center text-[14px] text-[var(--color-on-surface-variant)]">No history data</p>
               }
             </div>
           </div>
@@ -122,64 +143,45 @@ interface AlertItem {
       </div>
     </div>
   `,
-  styles: [
-    `
-      .material-symbols-outlined {
-        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      }
-    `,
-  ],
+  styles: [`
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  `],
 })
 export class StaffManagerSlaAlertComponent implements OnInit {
+  private readonly dmService = inject(DepartmentManagerService)
 
-  breaches = signal<BreachItem[]>([
-    {
-      id: 'INC-2023-8842',
-      type: 'Water Main Break',
-      typeIcon: 'water_damage',
-      title: 'Water Main Break - Ward 4',
-      category: 'Infrastructure',
-      timeRemaining: '12m remaining',
-      target: '45m',
-      isUrgent: true,
-    },
-    {
-      id: 'INC-2023-8845',
-      type: 'Power Outage',
-      typeIcon: 'electric_bolt',
-      title: 'Power Outage - Downtown',
-      category: 'Utilities',
-      timeRemaining: '28m remaining',
-      target: '60m',
-      isUrgent: false,
-    },
-  ])
-
-  alerts = signal<AlertItem[]>([
-    {
-      message: 'Ward 7 Response time dropped below 90% threshold.',
-      time: '10 mins ago',
-      type: 'error',
-    },
-    {
-      message: 'High volume warning: Traffic signals category.',
-      time: '1 hour ago',
-      type: 'warning',
-    },
-  ])
+  overview = signal<SlaOverview | null>(null)
+  nearDeadline = signal<SlaNearDeadlineItem[]>([])
+  history = signal<SlaHistoryItem[]>([])
 
   ngOnInit(): void {
-    // TODO: Load SLA data from API
+    this.loadData()
   }
 
-  getAlertDotClass(type: string): string {
-    switch (type) {
-      case 'error':
-        return 'bg-[var(--color-error)]'
-      case 'warning':
-        return 'bg-[var(--color-tertiary-container)]'
-      default:
-        return 'bg-[var(--color-surface-variant)]'
-    }
+  loadData(): void {
+    this.dmService.getSlaOverview().subscribe({
+      next: (data) => this.overview.set(data),
+      error: (err) => console.error('Failed to load SLA overview:', err),
+    })
+
+    this.dmService.getSlaNearDeadline().subscribe({
+      next: (data) => this.nearDeadline.set(data),
+      error: (err) => console.error('Failed to load near deadline:', err),
+    })
+
+    this.dmService.getSlaHistory(6).subscribe({
+      next: (data) => this.history.set(data.items),
+      error: (err) => console.error('Failed to load SLA history:', err),
+    })
+  }
+
+  formatTimeRemaining(minutes: number): string {
+    if (minutes <= 0) return 'Overdue'
+    if (minutes < 60) return `${minutes}m left`
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return mins > 0 ? `${hours}h ${mins}m left` : `${hours}h left`
   }
 }

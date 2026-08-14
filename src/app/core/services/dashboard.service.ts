@@ -110,6 +110,14 @@ export class DashboardService {
     return this.baseUrl.replace(/\/api$/, '')
   }
 
+  get<T>(endpoint: string, options?: { params?: HttpParams }): Observable<T> {
+    return this.http.get<T>(`${this.baseUrl}${endpoint}`, options)
+  }
+
+  post<T>(endpoint: string, body: unknown): Observable<T> {
+    return this.http.post<T>(`${this.baseUrl}${endpoint}`, body)
+  }
+
   getStats(): Observable<DashboardStatsResponse> {
     return this.http
       .get<ApiResponse<DashboardStatsResponse>>(`${this.baseUrl}/dashboard/stats`)
