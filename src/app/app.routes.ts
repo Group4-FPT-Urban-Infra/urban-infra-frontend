@@ -149,7 +149,7 @@ export const routes: Routes = [
       {
         path: 'map',
         loadComponent: () =>
-          import('./features/citizen/citizen-map.page').then((m) => m.CitizenMapComponent),
+          import('./features/staff/staff-map.page').then((m) => m.StaffMapComponent),
       },
       {
         path: 'incidents',
@@ -181,7 +181,7 @@ export const routes: Routes = [
       {
         path: 'map',
         loadComponent: () =>
-          import('./features/citizen/citizen-map.page').then((m) => m.CitizenMapComponent),
+          import('./features/staff/staff-map.page').then((m) => m.StaffMapComponent),
       },
       {
         path: 'incidents',

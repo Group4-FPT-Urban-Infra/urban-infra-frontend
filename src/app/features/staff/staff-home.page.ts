@@ -1,15 +1,19 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { RouterLink } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
+import { StaffStore } from './staff.store'
+import { RouterLink } from '@angular/router'
 
 @Component({
   selector: 'app-staff-home',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="min-h-screen bg-[var(--color-surface)] p-4 md:p-8">
       <!-- Page Header -->
+      @if (store.error()) {
+        <div class="mb-4 rounded-md bg-red-100 p-4 text-red-700">{{ store.error() }}</div>
+      }
       <header class="mb-6 flex items-end justify-between">
         <div>
           <h2 class="text-[36px] font-bold text-[var(--color-on-surface)]" style="letter-spacing: -0.02em; line-height: 44px;">
@@ -32,6 +36,9 @@ import { AuthStore } from '../../core/auth/auth.store'
       </header>
 
       <!-- Metrics Bento Grid -->
+      @if (store.loading().dashboard) {
+        <div class="text-center p-8">Loading dashboard data...</div>
+      } @else if (store.dashboardSummary(); as summary) {
       <div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <!-- Assigned Incidents -->
         <div class="flex flex-col justify-between rounded-xl border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
@@ -44,7 +51,7 @@ import { AuthStore } from '../../core/auth/auth.store'
             </div>
           </div>
           <div>
-            <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">24</h3>
+            <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">{{ summary.assignedTasks }}</h3>
             <p class="mt-1 flex items-center gap-1 text-[11px] font-medium text-[var(--color-secondary)]">
               <span class="material-symbols-outlined text-[14px]">arrow_downward</span>
               12% from yesterday
@@ -63,7 +70,7 @@ import { AuthStore } from '../../core/auth/auth.store'
             </div>
           </div>
           <div>
-            <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">7</h3>
+            <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">{{ summary.highPriorityTasks }}</h3>
             <p class="mt-1 flex items-center gap-1 text-[11px] font-medium text-[var(--color-error)]">
               <span class="material-symbols-outlined text-[14px]">arrow_upward</span>
               3 new in last hour
@@ -82,7 +89,7 @@ import { AuthStore } from '../../core/auth/auth.store'
             </div>
           </div>
           <div>
-            <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">4.2h</h3>
+            <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">{{ summary.avgResolutionTimeHours }}h</h3>
             <p class="mt-1 flex items-center gap-1 text-[11px] font-medium text-[var(--color-secondary)]">
               <span class="material-symbols-outlined text-[14px]">check_circle</span>
               On target (5h SLA)
@@ -101,13 +108,14 @@ import { AuthStore } from '../../core/auth/auth.store'
             </div>
           </div>
           <div>
-            <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">12</h3>
+            <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">{{ summary.pendingVerifications }}</h3>
             <p class="mt-1 text-[11px] font-medium text-[var(--color-on-surface-variant)]">
               Requires field inspection
             </p>
           </div>
         </div>
       </div>
+      }
 
       <!-- Main Grid Layout -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -117,85 +125,42 @@ import { AuthStore } from '../../core/auth/auth.store'
           <section class="flex h-full flex-col overflow-hidden rounded-xl border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] shadow-sm">
             <div class="flex items-center justify-between border-b border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-bright)] px-6 py-4">
               <h3 class="text-[18px] font-semibold text-[var(--color-on-surface)]">Priority Tasks</h3>
-              <button class="text-[12px] font-medium text-[var(--color-primary)] hover:underline">
+              <a routerLink="/staff/incidents" class="text-[12px] font-medium text-[var(--color-primary)] hover:underline">
                 View All
-              </button>
+              </a>
             </div>
             <div class="flex-1 overflow-y-auto">
-              <!-- Task Item 1 -->
-              <div class="group cursor-pointer border-b border-[var(--color-outline-variant)]/50 p-4 transition-colors hover:bg-[var(--color-surface-container-low)]">
-                <div class="mb-2 flex items-start justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="rounded-full bg-[var(--color-error-container)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-on-error-container)]">Critical</span>
-                    <span class="text-[11px] text-[var(--color-on-surface-variant)]">INC-2024-089</span>
+              @if (store.loading().dashboard) {
+                <div class="p-4 text-center text-sm text-[var(--color-on-surface-variant)]">Loading tasks...</div>
+              } @else if (store.myTasks().length === 0) {
+                <div class="p-4 text-center text-sm text-[var(--color-on-surface-variant)]">No tasks assigned to you.</div>
+              } @else {
+                @for (task of store.myTasks(); track task.id; let last = $last) {
+                  <div class="group cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)]" [class.border-b]="!last" [class.border-[var(--color-outline-variant)]/50]="!last">
+                    <div class="mb-2 flex items-start justify-between">
+                      <div class="flex items-center gap-2">
+                        <span class="rounded-full px-2 py-0.5 text-[11px] font-medium" [ngClass]="getPriorityClass(task.priority)">{{ task.priority }}</span>
+                        <span class="text-[11px] text-[var(--color-on-surface-variant)]">{{ task.id }}</span>
+                      </div>
+                      <span class="text-[11px] text-[var(--color-on-surface-variant)]">{{ task.assignedAt | date:'shortTime' }}</span>
+                    </div>
+                    <h4 class="mb-2 text-[16px] font-semibold text-[var(--color-on-surface)]">
+                      {{ task.title }}
+                    </h4>
+                    <p class="mb-3 line-clamp-1 text-[14px] text-[var(--color-on-surface-variant)]">
+                      {{ task.location }}
+                    </p>
+                    <div class="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button class="rounded bg-[var(--color-primary)] px-3 py-1 text-[11px] font-medium text-white hover:bg-[var(--color-primary)]/90">
+                        Update Status
+                      </button>
+                      <a [routerLink]="['/staff/incidents', task.id.replace('INC-', '')]" class="rounded bg-[var(--color-surface-variant)] px-3 py-1 text-[11px] font-medium text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-dim)]">
+                        View Details
+                      </a>
+                    </div>
                   </div>
-                  <span class="text-[11px] text-[var(--color-on-surface-variant)]">10m ago</span>
-                </div>
-                <h4 class="mb-2 text-[16px] font-semibold text-[var(--color-on-surface)]">
-                  Traffic Signal Failure at Main & 5th
-                </h4>
-                <p class="mb-3 line-clamp-1 text-[14px] text-[var(--color-on-surface-variant)]">
-                  Multiple reports of all lights flashing red. Traffic backing up onto highway.
-                </p>
-                <div class="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button class="rounded bg-[var(--color-primary)] px-3 py-1 text-[11px] font-medium text-white hover:bg-[var(--color-primary)]/90">
-                    Update Status
-                  </button>
-                  <button class="rounded bg-[var(--color-surface-variant)] px-3 py-1 text-[11px] font-medium text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-dim)]">
-                    View Details
-                  </button>
-                </div>
-              </div>
-
-              <!-- Task Item 2 -->
-              <div class="group cursor-pointer border-b border-[var(--color-outline-variant)]/50 p-4 transition-colors hover:bg-[var(--color-surface-container-low)]">
-                <div class="mb-2 flex items-start justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="rounded-full bg-[var(--color-tertiary-fixed)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-on-tertiary-fixed)]">High</span>
-                    <span class="text-[11px] text-[var(--color-on-surface-variant)]">INC-2024-085</span>
-                  </div>
-                  <span class="text-[11px] text-[var(--color-on-surface-variant)]">1h ago</span>
-                </div>
-                <h4 class="mb-2 text-[16px] font-semibold text-[var(--color-on-surface)]">
-                  Major Water Main Break
-                </h4>
-                <p class="mb-3 line-clamp-1 text-[14px] text-[var(--color-on-surface-variant)]">
-                  Water pooling in intersection of Oak and Pine. Crew dispatched but need traffic control.
-                </p>
-                <div class="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button class="rounded bg-[var(--color-primary)] px-3 py-1 text-[11px] font-medium text-white hover:bg-[var(--color-primary)]/90">
-                    Update Status
-                  </button>
-                  <button class="rounded bg-[var(--color-surface-variant)] px-3 py-1 text-[11px] font-medium text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-dim)]">
-                    View Details
-                  </button>
-                </div>
-              </div>
-
-              <!-- Task Item 3 -->
-              <div class="group cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)]">
-                <div class="mb-2 flex items-start justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="rounded-full bg-[var(--color-primary-fixed)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-on-primary-fixed)]">Medium</span>
-                    <span class="text-[11px] text-[var(--color-on-surface-variant)]">INC-2024-072</span>
-                  </div>
-                  <span class="text-[11px] text-[var(--color-on-surface-variant)]">3h ago</span>
-                </div>
-                <h4 class="mb-2 text-[16px] font-semibold text-[var(--color-on-surface)]">
-                  Pothole Cluster - Westbound Lane
-                </h4>
-                <p class="mb-3 line-clamp-1 text-[14px] text-[var(--color-on-surface-variant)]">
-                  Deep potholes forming near bus stop. Pending verification by field agent.
-                </p>
-                <div class="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button class="rounded bg-[var(--color-primary)] px-3 py-1 text-[11px] font-medium text-white hover:bg-[var(--color-primary)]/90">
-                    Update Status
-                  </button>
-                  <button class="rounded bg-[var(--color-surface-variant)] px-3 py-1 text-[11px] font-medium text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-dim)]">
-                    View Details
-                  </button>
-                </div>
-              </div>
+                }
+              }
             </div>
           </section>
         </div>
@@ -237,50 +202,31 @@ import { AuthStore } from '../../core/auth/auth.store'
             <div class="border-b border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-bright)] px-6 py-4">
               <h3 class="text-[18px] font-semibold text-[var(--color-on-surface)]">Recent Activity</h3>
             </div>
-            <div class="flex flex-col gap-4 p-4">
-              <!-- Activity Item 1 -->
-              <div class="flex gap-4">
-                <div class="mt-1">
-                  <div class="h-2 w-2 rounded-full bg-[var(--color-secondary-container)] ring-4 ring-[var(--color-secondary-container)]/20"></div>
-                  <div class="mx-auto mt-1 h-full w-px bg-[var(--color-outline-variant)]/50"></div>
-                </div>
-                <div class="flex-1 border-b border-[var(--color-outline-variant)]/30 pb-4">
-                  <p class="text-[14px] text-[var(--color-on-surface)]">
-                    <span class="font-semibold">Unit 42</span> resolved incident
-                    <a class="text-[var(--color-primary)] hover:underline" href="#">INC-2024-060</a> (Fallen Tree).
-                  </p>
-                  <p class="mt-1 text-[11px] text-[var(--color-on-surface-variant)]">15 mins ago</p>
-                </div>
+            @if (store.loading().dashboard) {
+              <div class="p-4 text-center text-sm text-[var(--color-on-surface-variant)]">Loading activities...</div>
+            } @else if (store.recentActivities().length === 0) {
+              <div class="p-4 text-center text-sm text-[var(--color-on-surface-variant)]">No recent activity.</div>
+            } @else {
+              <div class="flex flex-col gap-4 p-4">
+                @for (activity of store.recentActivities(); track activity.id; let last = $last) {
+                  <div class="flex gap-4">
+                    <div class="mt-1">
+                      <div class="h-2 w-2 rounded-full bg-[var(--color-secondary-container)] ring-4 ring-[var(--color-secondary-container)]/20"></div>
+                      @if (!last) {
+                        <div class="mx-auto mt-1 h-full w-px bg-[var(--color-outline-variant)]/50"></div>
+                      }
+                    </div>
+                    <div class="flex-1" [class.border-b]="!last" [class.border-[var(--color-outline-variant)]/30]="!last" [class.pb-4]="!last">
+                      <p class="text-[14px] text-[var(--color-on-surface)]">
+                        <span class="font-semibold">{{ activity.actorName }}</span> {{ activity.action }} incident
+                        <a [routerLink]="['/staff/incidents', activity.issueId.replace('INC-', '')]" class="text-[var(--color-primary)] hover:underline">{{ activity.issueId }}</a>.
+                      </p>
+                      <p class="mt-1 text-[11px] text-[var(--color-on-surface-variant)]">{{ activity.createdAt | date:'short' }}</p>
+                    </div>
+                  </div>
+                }
               </div>
-              <!-- Activity Item 2 -->
-              <div class="flex gap-4">
-                <div class="mt-1">
-                  <div class="h-2 w-2 rounded-full bg-[var(--color-primary-container)] ring-4 ring-[var(--color-primary-container)]/20"></div>
-                  <div class="mx-auto mt-1 h-full w-px bg-[var(--color-outline-variant)]/50"></div>
-                </div>
-                <div class="flex-1 border-b border-[var(--color-outline-variant)]/30 pb-4">
-                  <p class="text-[14px] text-[var(--color-on-surface)]">
-                    You assigned
-                    <a class="text-[var(--color-primary)] hover:underline" href="#">INC-2024-089</a> to
-                    <span class="font-semibold">Traffic Div. A</span>.
-                  </p>
-                  <p class="mt-1 text-[11px] text-[var(--color-on-surface-variant)]">32 mins ago</p>
-                </div>
-              </div>
-              <!-- Activity Item 3 -->
-              <div class="flex gap-4">
-                <div class="mt-1">
-                  <div class="h-2 w-2 rounded-full bg-[var(--color-surface-variant)] ring-4 ring-[var(--color-surface-variant)]/50"></div>
-                </div>
-                <div class="flex-1">
-                  <p class="text-[14px] text-[var(--color-on-surface)]">
-                    New comment on
-                    <a class="text-[var(--color-primary)] hover:underline" href="#">INC-2024-072</a> from Public Works.
-                  </p>
-                  <p class="mt-1 text-[11px] text-[var(--color-on-surface-variant)]">1 hour ago</p>
-                </div>
-              </div>
-            </div>
+          }
           </section>
         </div>
       </div>
@@ -296,13 +242,29 @@ import { AuthStore } from '../../core/auth/auth.store'
 })
 export class StaffHomeComponent implements OnInit {
   protected readonly authStore = inject(AuthStore)
+  protected readonly store = inject(StaffStore)
 
   ngOnInit(): void {
-    // TODO: Load staff-specific data
+    this.store.loadDashboardData()
   }
 
   userName(): string {
     const user = this.authStore.user()
     return user?.fullName?.split(' ')[0] || 'Alex'
+  }
+
+  getPriorityClass(priority: string): string {
+    switch (priority) {
+      case 'Critical':
+        return 'bg-[var(--color-error-container)] text-[var(--color-on-error-container)]'
+      case 'High':
+        return 'bg-[var(--color-tertiary-fixed)] text-[var(--color-on-tertiary-fixed)]'
+      case 'Medium':
+        return 'bg-[var(--color-primary-fixed)] text-[var(--color-on-primary-fixed)]'
+      case 'Low':
+        return 'bg-[var(--color-surface-variant)] text-[var(--color-on-surface-variant)]'
+      default:
+        return 'bg-[var(--color-surface-variant)] text-[var(--color-on-surface-variant)]'
+    }
   }
 }
