@@ -129,6 +129,17 @@ import { NotificationItem } from '../../core/models/notification.model'
               Staffs
             </a>
           }
+          @case ('Admin') {
+            <!-- Admin Dashboard -->
+            <a
+              routerLink="/admin"
+              routerLinkActive="nav-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+            >
+              Admin Dashboard
+            </a>
+          }
           @default {
             <!-- Citizen Dashboard (default) -->
             <a
