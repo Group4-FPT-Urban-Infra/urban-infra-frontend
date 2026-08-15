@@ -26,6 +26,21 @@ export const routes: Routes = [
         loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
       },
       {
+        path: 'map',
+        loadComponent: () =>
+          import('./features/citizen/citizen-map.page').then((m) => m.CitizenMapComponent),
+      },
+      {
+        path: 'incidents',
+        loadComponent: () =>
+          import('./features/citizen/citizen-reports.page').then((m) => m.CitizenReportsComponent),
+      },
+      {
+        path: 'incidents/:id',
+        loadComponent: () =>
+          import('./features/citizen/incident-detail.page').then((m) => m.IncidentDetailComponent),
+      },
+      {
         path: 'incident-reporting',
         canActivate: [authGuard],
         loadComponent: () =>
@@ -109,6 +124,7 @@ export const routes: Routes = [
   },
   {
     path: 'citizen',
+    canActivate: [roleGuard(['Citizen'])],
     loadComponent: () =>
       import('./shared/layout/citizen-layout.component').then((m) => m.CitizenLayoutComponent),
     children: [
