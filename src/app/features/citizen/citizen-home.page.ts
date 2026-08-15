@@ -4,6 +4,8 @@ import { Router, RouterLink } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
 import { DashboardService } from '../../core/services/dashboard.service'
 import type { IssueSummaryResponse } from '../../core/services/dashboard.service'
+import type { IssueTimelineItemResponse } from '../../core/services/dashboard.service'
+import { forkJoin } from 'rxjs'
 
 @Component({
   selector: 'app-citizen-home',
@@ -228,33 +230,19 @@ import type { IssueSummaryResponse } from '../../core/services/dashboard.service
               </h3>
             </div>
             <div class="flex flex-col gap-4">
-              <div class="relative flex items-start gap-3 border-l-2 border-[var(--color-primary-fixed)] pl-4">
-                <div class="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[var(--color-primary-container)]"></div>
-                <div>
-                  <p class="text-[12px] font-medium text-[var(--color-on-surface)]">
-                    Report #REP-8821 status changed to 'In Progress'
-                  </p>
-                  <span class="text-[11px] text-[var(--color-on-surface-variant)]">2 hours ago</span>
+              @for (update of recentUpdates(); track update.id) {
+                <div class="relative flex items-start gap-3 border-l-2 border-[var(--color-primary-fixed)] pl-4">
+                  <div class="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[var(--color-primary-container)]"></div>
+                  <div>
+                    <p class="text-[12px] font-medium text-[var(--color-on-surface)]">
+                      {{ update.note || update.toStatus?.name || update.updateType }}
+                    </p>
+                    <span class="text-[11px] text-[var(--color-on-surface-variant)]">{{ formatTimeAgo(update.createdAt) }}</span>
+                  </div>
                 </div>
-              </div>
-              <div class="relative flex items-start gap-3 border-l-2 border-[var(--color-surface-variant)] pl-4">
-                <div class="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[var(--color-outline-variant)]"></div>
-                <div>
-                  <p class="text-[12px] font-medium text-[var(--color-on-surface)]">
-                    New community alert: Planned road closure on Main St.
-                  </p>
-                  <span class="text-[11px] text-[var(--color-on-surface-variant)]">Yesterday</span>
-                </div>
-              </div>
-              <div class="relative flex items-start gap-3 border-l-2 border-[var(--color-surface-variant)] pl-4">
-                <div class="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[var(--color-outline-variant)]"></div>
-                <div>
-                  <p class="text-[12px] font-medium text-[var(--color-on-surface)]">
-                    Thank you! Your report #REP-8700 was resolved.
-                  </p>
-                  <span class="text-[11px] text-[var(--color-on-surface-variant)]">Oct 12</span>
-                </div>
-              </div>
+              } @empty {
+                <p class="text-sm text-[var(--color-on-surface-variant)]">Chưa có cập nhật xử lý.</p>
+              }
             </div>
           </section>
 
@@ -338,6 +326,7 @@ export class CitizenHomeComponent implements OnInit {
 
   myStats = signal({ totalReports: 0, resolved: 0, helpfulnessScore: 0 })
   myReports = signal<IssueSummaryResponse[]>([])
+  recentUpdates = signal<IssueTimelineItemResponse[]>([])
   isLoadingMyReports = signal(false)
 
   ngOnInit(): void {
@@ -362,18 +351,20 @@ export class CitizenHomeComponent implements OnInit {
   private loadMyData(): void {
     if (this.authStore.isAuthenticated()) {
       this.isLoadingMyReports.set(true)
-      this.dashboardService.getMyStats().subscribe({
-        next: (stats) => {
-          this.myStats.set(stats)
-        },
-        error: () => {
-          this.myStats.set({ totalReports: 0, resolved: 0, helpfulnessScore: 0 })
-        },
-      })
-
       this.dashboardService.getMyReports().subscribe({
         next: (reports) => {
           this.myReports.set(reports)
+          const resolved = reports.filter((item) => ['RESOLVED', 'CLOSED'].includes(item.status.code.toUpperCase())).length
+          const helpfulnessScore = Math.min(100, reports.reduce((sum, item) => sum + item.upvoteCount, 0))
+          this.myStats.set({ totalReports: reports.length, resolved, helpfulnessScore })
+          const timelineRequests = reports.slice(0, 5).map((item) => this.dashboardService.getTimeline(item.id))
+          if (timelineRequests.length) {
+            forkJoin(timelineRequests).subscribe({
+              next: (groups) => this.recentUpdates.set(groups.flat()
+                .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 5)),
+              error: () => this.recentUpdates.set([]),
+            })
+          }
           this.isLoadingMyReports.set(false)
         },
         error: () => {

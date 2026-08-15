@@ -2,16 +2,11 @@ import { Component, inject, OnInit, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { FormsModule } from '@angular/forms'
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser'
+import { forkJoin } from 'rxjs'
 import { DashboardService } from '../../core/services/dashboard.service'
 import { AuthStore } from '../../core/auth/auth.store'
-import type { IssueSummaryResponse } from '../../core/services/dashboard.service'
-
-interface IssueDetail extends IssueSummaryResponse {
-  description?: string
-  assignedDepartment?: string
-  submitter?: string
-  images?: string[]
-}
+import type { IssueDetailResponse, IssueTimelineItemResponse } from '../../core/services/dashboard.service'
 
 @Component({
   selector: 'app-incident-detail',
@@ -80,6 +75,14 @@ interface IssueDetail extends IssueSummaryResponse {
                 <span class="material-symbols-outlined mr-1 text-[14px]">category</span>
                 {{ issue()!.issueType.name }}
               </span>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-full border border-[var(--color-primary)]/30 px-3 py-1 text-[11px] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
+                (click)="toggleUpvote()"
+              >
+                <span class="material-symbols-outlined text-[14px]">thumb_up</span>
+                {{ issue()!.hasUpvoted ? 'Bỏ ủng hộ' : 'Ủng hộ' }} ({{ issue()!.upvoteCount }})
+              </button>
             </div>
           </div>
           <!-- SLA Countdown Box -->
@@ -107,9 +110,9 @@ interface IssueDetail extends IssueSummaryResponse {
               class="overflow-hidden rounded-xl border border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-lowest)] p-1 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]"
             >
               <div class="group relative h-[300px] w-full overflow-hidden rounded-lg md:h-[400px]">
-                @if (issue()!.thumbnailUrl) {
+                @if (selectedImageUrl()) {
                   <img
-                    [src]="getImageUrl(issue()!.thumbnailUrl)"
+                    [src]="selectedImageUrl()"
                     [alt]="issue()!.title"
                     class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
@@ -124,31 +127,23 @@ interface IssueDetail extends IssueSummaryResponse {
                     class="flex items-center gap-1 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white backdrop-blur-sm"
                   >
                     <span class="material-symbols-outlined text-[14px]">image</span>
-                    1 of 4
+                    {{ selectedImageIndex() + 1 }} of {{ issue()!.attachments.length }}
                   </span>
                 </div>
               </div>
               <!-- Thumbnail Strip -->
-              <div class="grid grid-cols-3 gap-2 p-2">
-                <div class="h-24 cursor-pointer overflow-hidden rounded-lg border-2 border-[var(--color-primary)] opacity-100">
-                  @if (issue()!.thumbnailUrl) {
-                    <img [src]="getImageUrl(issue()!.thumbnailUrl)" [alt]="issue()!.title" class="h-full w-full object-cover" />
+              @if (issue()!.attachments.length > 1) {
+                <div class="flex gap-2 overflow-x-auto p-2">
+                  @for (image of issue()!.attachments; track image.id; let index = $index) {
+                    <button type="button" class="h-24 w-28 shrink-0 overflow-hidden rounded-lg"
+                      [class.border-2]="selectedImageIndex() === index"
+                      [class.border-[var(--color-primary)]]="selectedImageIndex() === index"
+                      (click)="selectImage(index)">
+                      <img [src]="getImageUrl(image.thumbnailUrl || image.fileUrl)" [alt]="issue()!.title" class="h-full w-full object-cover" />
+                    </button>
                   }
                 </div>
-                <div class="h-24 cursor-pointer overflow-hidden rounded-lg opacity-70 transition-opacity hover:opacity-100">
-                  <div class="flex h-full w-full items-center justify-center bg-[var(--color-surface-container)]">
-                    <span class="material-symbols-outlined text-2xl text-[var(--color-outline)]">image</span>
-                  </div>
-                </div>
-                <div class="relative h-24 cursor-pointer overflow-hidden rounded-lg opacity-70 transition-opacity hover:opacity-100">
-                  <div class="flex h-full w-full items-center justify-center bg-[var(--color-surface-container)]">
-                    <span class="material-symbols-outlined text-2xl text-[var(--color-outline)]">image</span>
-                  </div>
-                  <div class="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <span class="text-[12px] font-bold text-white">+1</span>
-                  </div>
-                </div>
-              </div>
+              }
             </div>
 
             <!-- Description & Details -->
@@ -164,14 +159,14 @@ interface IssueDetail extends IssueSummaryResponse {
                   <span class="mb-1 block text-[11px] text-[var(--color-outline)]">Assigned Department</span>
                   <span class="flex items-center gap-2 text-[14px] font-medium text-[var(--color-on-surface)]">
                     <span class="material-symbols-outlined text-[16px] text-[var(--color-primary)]">engineering</span>
-                    Dept. of Public Works
+                    {{ issue()!.currentDepartment?.name || 'Chưa định tuyến' }}
                   </span>
                 </div>
                 <div>
                   <span class="mb-1 block text-[11px] text-[var(--color-outline)]">Submitter</span>
                   <span class="flex items-center gap-2 text-[14px] font-medium text-[var(--color-on-surface)]">
                     <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-surface-container-high)] text-[10px] font-bold">CS</span>
-                    Citizen
+                    {{ issue()!.reporterDisplayName }}
                   </span>
                 </div>
                 <div>
@@ -189,6 +184,8 @@ interface IssueDetail extends IssueSummaryResponse {
               </div>
             </div>
 
+            <!-- Comment API chưa thuộc domain hiện tại; ẩn khỏi UI cho đến khi có contract chính thức. -->
+            @if (false) {
             <!-- Comments & Interaction Section -->
             <div
               class="rounded-xl border border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-lowest)] p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]"
@@ -257,6 +254,7 @@ interface IssueDetail extends IssueSummaryResponse {
                 </div>
               </div>
             </div>
+            }
           </div>
 
           <!-- Sidebar Content -->
@@ -266,10 +264,7 @@ interface IssueDetail extends IssueSummaryResponse {
               class="flex h-[300px] flex-col overflow-hidden rounded-xl border border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-lowest)] p-1 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]"
             >
               <div class="relative h-full w-full flex-1 overflow-hidden rounded-t-lg bg-[var(--color-surface-variant)]">
-                <div
-                  class="h-full w-full bg-cover bg-center"
-                  style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBmGToxsG00CKLDuk_Pm6ve2ZRsv1RYlyt2q479pcNV2xeUDwm-zWa75fCR8o3Al3c8RCZBVnbzs5crXDQxmInSde3vqe0tE7ROKfBXsdpeFpgximBhN-MkvalzKXP_FCZIbkvGQOx7_BVOY5FGwpbjjBu-OB9qjopfaTy4mk-Oagic3WkLmU31yafu1U6tINtw678IMUGoZcaXsz4y1BeiS7nXMeFvYf_w3t0jhu2EdtSKQyx4lL0');"
-                ></div>
+                <iframe class="h-full w-full border-0" [src]="mapEmbedUrl()" title="Incident location map"></iframe>
                 <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <span class="material-symbols-outlined text-[40px] text-[var(--color-error)] drop-shadow-md"
                     >location_on</span
@@ -280,9 +275,10 @@ interface IssueDetail extends IssueSummaryResponse {
                 class="flex items-center justify-between rounded-b-lg border-t border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-low)] p-4"
               >
                 <span class="text-[12px] text-[var(--color-on-surface-variant)]">{{ issue()!.area.name }}</span>
-                <button class="text-[12px] font-medium text-[var(--color-primary)] hover:underline">
+                <a [href]="directionsUrl()" target="_blank" rel="noopener noreferrer"
+                  class="text-[12px] font-medium text-[var(--color-primary)] hover:underline">
                   Get Directions
-                </button>
+                </a>
               </div>
             </div>
 
@@ -292,6 +288,19 @@ interface IssueDetail extends IssueSummaryResponse {
             >
               <h2 class="mb-6 text-[18px] font-semibold text-[var(--color-on-surface)]">Status History</h2>
               <div class="relative space-y-6 pl-6 before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-[2px] before:bg-[var(--color-outline-variant)]/50 before:content-['']">
+                @for (event of timeline(); track event.id) {
+                  <div class="relative">
+                    <div class="absolute -left-[30px] z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--color-surface-container-lowest)] bg-[var(--color-primary-fixed)]">
+                      <span class="material-symbols-outlined text-[12px]">history</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <span class="text-[12px] font-bold text-[var(--color-on-surface)]">{{ event.toStatus?.name || event.updateType }}</span>
+                      <span class="mb-1 text-[11px] text-[var(--color-outline)]">{{ formatDate(event.createdAt) }}</span>
+                      @if (event.note) { <span class="text-[14px] text-[var(--color-on-surface-variant)]">{{ event.note }}</span> }
+                    </div>
+                  </div>
+                }
+                @if (timeline().length === 0) {
                 <!-- Timeline Item: Current -->
                 <div class="relative">
                   <div
@@ -305,6 +314,7 @@ interface IssueDetail extends IssueSummaryResponse {
                     <span class="text-[14px] text-[var(--color-on-surface-variant)]">Crew dispatched for initial assessment.</span>
                   </div>
                 </div>
+                }
                 <!-- Timeline Item: Past -->
                 <div class="relative">
                   <div
@@ -363,8 +373,11 @@ export class IncidentDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly router = inject(Router)
   private readonly dashboardService = inject(DashboardService)
+  private readonly sanitizer = inject(DomSanitizer)
 
-  issue = signal<IssueDetail | null>(null)
+  issue = signal<IssueDetailResponse | null>(null)
+  timeline = signal<IssueTimelineItemResponse[]>([])
+  selectedImageIndex = signal(0)
   isLoading = signal(true)
   newComment = ''
 
@@ -377,16 +390,19 @@ export class IncidentDetailComponent implements OnInit {
 
   private loadIssue(id: number): void {
     this.isLoading.set(true)
-    this.dashboardService.getIssueById(id).subscribe({
-      next: (issue) => {
-        // Add mock description for display
-        const detail = issue as IssueDetail
-        detail.description = `This issue was reported by a citizen in the ${issue.area.name} area. The ${issue.issueType.name.toLowerCase()} requires attention from the relevant department.`
-        this.issue.set(detail)
+    forkJoin({
+      issue: this.dashboardService.getIssueById(id),
+      timeline: this.dashboardService.getTimeline(id),
+    }).subscribe({
+      next: ({ issue, timeline }) => {
+        this.issue.set(issue)
+        this.timeline.set(timeline)
+        this.selectedImageIndex.set(0)
         this.isLoading.set(false)
       },
       error: () => {
         this.issue.set(null)
+        this.timeline.set([])
         this.isLoading.set(false)
       },
     })
@@ -417,6 +433,50 @@ export class IncidentDetailComponent implements OnInit {
 
   getImageUrl(relativePath: string | null | undefined): string | null {
     return this.dashboardService.getImageUrl(relativePath)
+  }
+
+  selectedImageUrl(): string | null {
+    const current = this.issue()
+    if (!current) return null
+    const attachment = current.attachments[this.selectedImageIndex()]
+    return this.getImageUrl(attachment?.fileUrl || current.thumbnailUrl)
+  }
+
+  selectImage(index: number): void {
+    this.selectedImageIndex.set(index)
+  }
+
+  toggleUpvote(): void {
+    const current = this.issue()
+    if (!current) return
+    if (!this.authStore.isAuthenticated()) {
+      void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } })
+      return
+    }
+
+    const request = current.hasUpvoted
+      ? this.dashboardService.removeUpvote(current.id)
+      : this.dashboardService.upvoteIssue(current.id)
+    request.subscribe({
+      next: (result) => this.issue.update((value) => value
+        ? { ...value, hasUpvoted: result.hasUpvoted, upvoteCount: result.upvoteCount }
+        : value),
+    })
+  }
+
+  directionsUrl(): string {
+    const current = this.issue()
+    return current
+      ? `https://www.google.com/maps/dir/?api=1&destination=${current.latitude},${current.longitude}`
+      : 'https://www.google.com/maps'
+  }
+
+  mapEmbedUrl(): SafeResourceUrl {
+    const current = this.issue()
+    if (!current) return this.sanitizer.bypassSecurityTrustResourceUrl('about:blank')
+    const delta = 0.004
+    const url = `https://www.openstreetmap.org/export/embed.html?bbox=${current.longitude - delta}%2C${current.latitude - delta}%2C${current.longitude + delta}%2C${current.latitude + delta}&layer=mapnik&marker=${current.latitude}%2C${current.longitude}`
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url)
   }
 
   getUserInitials(): string {

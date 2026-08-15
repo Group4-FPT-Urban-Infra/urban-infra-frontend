@@ -92,6 +92,22 @@ export class AuthStore {
     }
   }
 
+  updateSession(accessToken: string, refreshToken?: string, user?: AuthUser): void {
+    this.tokens.set(accessToken, refreshToken)
+    if (user) {
+      this._user.set(user)
+      localStorage.setItem(USER_KEY, JSON.stringify(user))
+    }
+  }
+
+  clearSession(): void {
+    this.tokens.clear()
+    localStorage.removeItem(USER_KEY)
+    this._user.set(null)
+    this._status.set('idle')
+    this._error.set(null)
+  }
+
   private restore(): AuthUser | null {
     const raw = localStorage.getItem(USER_KEY)
     return raw ? (JSON.parse(raw) as AuthUser) : null

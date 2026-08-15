@@ -1,8 +1,8 @@
 import { inject } from '@angular/core'
 import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpEvent, HttpErrorResponse } from '@angular/common/http'
 import { Router } from '@angular/router'
-import { Observable, throwError, BehaviorSubject, from, timer } from 'rxjs'
-import { switchMap, filter, take, catchError, tap, finalize } from 'rxjs/operators'
+import { Observable, throwError } from 'rxjs'
+import { switchMap, catchError, finalize, map, shareReplay } from 'rxjs/operators'
 import { TokenStorage } from '../auth/token-storage'
 import { AuthService } from '../auth/auth.service'
 import { AuthStore } from '../auth/auth.store'
@@ -11,8 +11,7 @@ import { AuthStore } from '../auth/auth.store'
  * Prevents multiple simultaneous refresh attempts.
  * Only the first 401 triggers a refresh; subsequent ones wait for it.
  */
-let isRefreshing = false
-const refreshTokenSubject = new BehaviorSubject<string | null>(null)
+let refreshRequest$: Observable<string> | null = null
 
 /** Checks if a request should NOT trigger a token refresh. */
 function isAuthRequest(req: HttpRequest<unknown>): boolean {
@@ -47,28 +46,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error)
       }
 
-      // Prevent multiple simultaneous refresh attempts
-      if (isRefreshing) {
-        // Wait for the ongoing refresh to complete, then retry with new token
-        return refreshTokenSubject.pipe(
-          filter((token) => token !== null),
-          take(1),
-          switchMap((newToken) => {
-            const retryReq = req.clone({
-              setHeaders: { Authorization: `Bearer ${newToken}` },
-            })
-            return next(retryReq)
-          }),
-          catchError((err) => {
-            handleRefreshFailure()
-            return throwError(() => err)
-          })
-        )
-      }
-
-      isRefreshing = true
-      refreshTokenSubject.next(null)
-
       const refreshToken = tokenStorage.refresh
 
       // If no refresh token, redirect to login
@@ -78,49 +55,40 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       const accessToken = tokenStorage.access
+      if (!accessToken) {
+        handleRefreshFailure()
+        return throwError(() => error)
+      }
 
-      // Attempt to refresh
-      return from(authService.refreshToken(accessToken!, refreshToken)).pipe(
-        switchMap((res) => {
-          if (res.success && res.accessToken && res.refreshToken) {
-            // Store new tokens
-            tokenStorage.set(res.accessToken, res.refreshToken)
-
-            // Update auth store with new user data if available
-            if (res.user) {
-              authStore['_user'].set(res.user)
-              localStorage.setItem('auth.user', JSON.stringify(res.user))
+      if (!refreshRequest$) {
+        refreshRequest$ = authService.refreshToken(accessToken, refreshToken).pipe(
+          map((res) => {
+            if (!res.success || !res.accessToken || !res.refreshToken) {
+              throw new Error(res.message ?? 'Token refresh failed')
             }
-
-            refreshTokenSubject.next(res.accessToken)
-
-            // Retry original request with new token
-            const retryReq = req.clone({
-              setHeaders: { Authorization: `Bearer ${res.accessToken}` },
-            })
-            return next(retryReq)
-          } else {
+            authStore.updateSession(res.accessToken, res.refreshToken, res.user)
+            return res.accessToken
+          }),
+          catchError((err) => {
             handleRefreshFailure()
-            return throwError(() => new Error(res.message ?? 'Token refresh failed'))
-          }
-        }),
-        catchError((err) => {
-          handleRefreshFailure()
-          return throwError(() => err)
-        }),
-        finalize(() => {
-          isRefreshing = false
-        })
+            return throwError(() => err)
+          }),
+          finalize(() => { refreshRequest$ = null }),
+          shareReplay({ bufferSize: 1, refCount: false }),
+        )
+      }
+
+      return refreshRequest$.pipe(
+        switchMap((newToken) => next(req.clone({
+          setHeaders: { Authorization: `Bearer ${newToken}` },
+        }))),
       )
     })
   )
 
   function handleRefreshFailure(): void {
-    isRefreshing = false
-    refreshTokenSubject.next(null)
-    tokenStorage.clear()
-    localStorage.removeItem('auth.user')
-    authStore['_user'].set(null)
+    refreshRequest$ = null
+    authStore.clearSession()
     void router.navigate(['/login'])
   }
 }
