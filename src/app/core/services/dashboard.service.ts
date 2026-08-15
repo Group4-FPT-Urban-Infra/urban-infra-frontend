@@ -101,6 +101,32 @@ export interface IssueAttachmentResponse {
   createdAt: string
 }
 
+export interface IssueTimelineItemResponse {
+  id: number
+  updateType: string
+  fromStatus?: { id: number; name: string; code: string }
+  toStatus?: { id: number; name: string; code: string }
+  progressPercent?: number
+  note?: string
+  isSystemGenerated: boolean
+  createdAt: string
+  attachments: IssueAttachmentResponse[]
+}
+
+export interface UpvoteResponse {
+  issueId: number
+  hasUpvoted: boolean
+  upvoteCount: number
+}
+
+export interface SearchIssuesOptions {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  issueTypeId?: number
+  statusCodes?: string[]
+}
+
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   private readonly http = inject(HttpClient)
@@ -108,6 +134,14 @@ export class DashboardService {
 
   private getStaticBaseUrl(): string {
     return this.baseUrl.replace(/\/api$/, '')
+  }
+
+  get<T>(endpoint: string, options?: { params?: HttpParams }): Observable<T> {
+    return this.http.get<T>(`${this.baseUrl}${endpoint}`, options)
+  }
+
+  post<T>(endpoint: string, body: unknown): Observable<T> {
+    return this.http.post<T>(`${this.baseUrl}${endpoint}`, body)
   }
 
   getStats(): Observable<DashboardStatsResponse> {
@@ -140,6 +174,39 @@ export class DashboardService {
           return response.data?.items || []
         })
       )
+  }
+
+  searchIssues(options: SearchIssuesOptions = {}): Observable<PagedResponse<IssueSummaryResponse>> {
+    let params = new HttpParams()
+      .set('page', String(options.page ?? 1))
+      .set('pageSize', String(options.pageSize ?? 20))
+      .set('sort', 'reportedAtDesc')
+
+    if (options.keyword?.trim()) params = params.set('keyword', options.keyword.trim())
+    if (options.issueTypeId) params = params.set('issueTypeId', String(options.issueTypeId))
+    options.statusCodes?.forEach((code) => (params = params.append('statusCodes', code)))
+
+    return this.http
+      .get<ApiResponse<PagedResponse<IssueSummaryResponse>>>(`${this.baseUrl}/issues`, { params })
+      .pipe(map((response) => response.data))
+  }
+
+  getTimeline(issueId: number): Observable<IssueTimelineItemResponse[]> {
+    return this.http
+      .get<ApiResponse<IssueTimelineItemResponse[]>>(`${this.baseUrl}/issues/${issueId}/timeline`)
+      .pipe(map((response) => response.data ?? []))
+  }
+
+  upvoteIssue(issueId: number): Observable<UpvoteResponse> {
+    return this.http
+      .post<ApiResponse<UpvoteResponse>>(`${this.baseUrl}/issues/${issueId}/upvote`, {})
+      .pipe(map((response) => response.data))
+  }
+
+  removeUpvote(issueId: number): Observable<UpvoteResponse> {
+    return this.http
+      .delete<ApiResponse<UpvoteResponse>>(`${this.baseUrl}/issues/${issueId}/upvote`)
+      .pipe(map((response) => response.data))
   }
 
   getNearbyIssues(

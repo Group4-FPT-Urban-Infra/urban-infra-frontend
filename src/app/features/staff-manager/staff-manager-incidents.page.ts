@@ -1,33 +1,19 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
-
-interface IncidentRow {
-  id: string
-  type: string
-  typeIcon: string
-  location: string
-  priority: 'Critical' | 'High' | 'Medium' | 'Low'
-  slaRemaining: string
-  slaPercent: number
-  assignedTo: string
-  assignedAvatar?: string
-  reportedAt: string
-}
+import { FormsModule } from '@angular/forms'
+import { Router } from '@angular/router'
+import { DepartmentManagerService } from '../../core/services/department-manager.service'
+import { DepartmentManagerIssueSummary, TeamWorkloadItem } from '../../core/services/department-manager.service'
 
 @Component({
   selector: 'app-staff-manager-incidents',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="min-h-screen bg-[var(--color-background)] p-4 md:p-8">
       <!-- Page Header -->
       <div class="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <div class="mb-2 flex items-center gap-2 text-[12px] text-[var(--color-on-surface-variant)]">
-            <span>Reports</span>
-            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
-            <span class="font-bold text-[var(--color-primary)]">Incident Management</span>
-          </div>
           <h2 class="text-[36px] font-bold text-[var(--color-on-surface)]" style="letter-spacing: -0.02em; line-height: 44px;">
             Active Incidents
           </h2>
@@ -36,14 +22,9 @@ interface IncidentRow {
           </p>
         </div>
         <div class="flex gap-3">
-          <button class="flex items-center gap-2 rounded-lg border border-[var(--color-outline-variant)]/50 bg-white px-4 py-2 text-[12px] font-medium text-[var(--color-on-surface)] shadow-sm transition-all hover:bg-[var(--color-surface-container)]">
-            <span class="material-symbols-outlined text-[18px]">download</span>
-            Export CSV
-          </button>
-          <button class="flex items-center gap-2 rounded-lg bg-[var(--color-primary-container)] px-4 py-2 text-[12px] font-medium text-[var(--color-on-primary-container)] shadow-sm transition-all hover:opacity-90">
-            <span class="material-symbols-outlined text-[18px]">add_task</span>
-            Assign Batch
-          </button>
+          <span class="rounded-md bg-[var(--color-surface-container)] px-3 py-2 text-[12px] font-bold text-[var(--color-on-surface)]">
+            {{ totalCount() }} Active
+          </span>
         </div>
       </div>
 
@@ -51,10 +32,12 @@ interface IncidentRow {
       <div class="mb-6 flex flex-col items-center gap-3 rounded-xl border border-[var(--color-outline-variant)]/30 bg-white p-4 shadow-sm lg:flex-row">
         <!-- Search -->
         <div class="group relative w-full lg:w-72">
-          <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[18px] text-[var(--color-outline)] transition-colors group-focus-within:text-[var(--color-primary)]">search</span>
+          <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[18px] text-[var(--color-outline)]">search</span>
           <input
             type="text"
-            placeholder="Search ID, Location, Keyword..."
+            [(ngModel)]="searchKeyword"
+            (ngModelChange)="onSearchChange()"
+            placeholder="Search ID, Title..."
             class="w-full rounded-lg border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] py-2 pl-10 pr-4 text-[14px] shadow-sm transition-all focus:border-transparent focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none"
           />
         </div>
@@ -64,53 +47,31 @@ interface IncidentRow {
         <!-- Filters -->
         <div class="flex w-full flex-wrap items-center gap-3 lg:w-auto">
           <div class="relative">
-            <select class="appearance-none rounded-lg border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] py-2 pl-4 pr-10 text-[14px] shadow-sm transition-colors hover:bg-[var(--color-surface-container)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none min-w-[130px]">
-              <option value="">Status: All</option>
-              <option value="new">New</option>
-              <option value="in_progress">In Progress</option>
-              <option value="pending">Pending</option>
-            </select>
-            <span class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-[var(--color-outline)]">expand_more</span>
-          </div>
-
-          <div class="relative">
-            <select class="appearance-none rounded-lg border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] py-2 pl-4 pr-10 text-[14px] shadow-sm transition-colors hover:bg-[var(--color-surface-container)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none min-w-[130px]">
-              <option value="">Priority: All</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-            <span class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-[var(--color-outline)]">expand_more</span>
-          </div>
-
-          <div class="relative">
-            <select class="appearance-none rounded-lg border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] py-2 pl-4 pr-10 text-[14px] shadow-sm transition-colors hover:bg-[var(--color-surface-container)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none min-w-[150px]">
-              <option value="">Assigned: Any</option>
+            <select [(ngModel)]="selectedFilter" (ngModelChange)="loadIssues()" class="appearance-none rounded-lg border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] py-2 pl-4 pr-10 text-[14px] shadow-sm transition-colors hover:bg-[var(--color-surface-container)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none min-w-[150px]">
+              <option value="">All Incidents</option>
               <option value="unassigned">Unassigned</option>
-              <option value="team_a">Team Alpha</option>
-              <option value="team_b">Team Beta</option>
+              <option value="team_assigned">Team Assigned</option>
+              <option value="my_assigned">My Assigned</option>
             </select>
             <span class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-[var(--color-outline)]">expand_more</span>
           </div>
 
           <div class="relative">
-            <select class="appearance-none rounded-lg border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] py-2 pl-4 pr-10 text-[14px] shadow-sm transition-colors hover:bg-[var(--color-surface-container)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none min-w-[120px]">
-              <option value="">Ward: All</option>
-              <option value="w1">Ward 1</option>
-              <option value="w2">Ward 2</option>
-              <option value="w3">Ward 3</option>
+            <select [(ngModel)]="selectedPriority" (ngModelChange)="loadIssues()" class="appearance-none rounded-lg border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] py-2 pl-4 pr-10 text-[14px] shadow-sm transition-colors hover:bg-[var(--color-surface-container)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none min-w-[130px]">
+              <option value="">Priority: All</option>
+              <option value="1">Critical</option>
+              <option value="2">High</option>
+              <option value="3">Medium</option>
+              <option value="4">Low</option>
             </select>
             <span class="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-[var(--color-outline)]">expand_more</span>
           </div>
         </div>
 
         <div class="flex items-center gap-2 lg:ml-auto">
-          <button class="rounded-lg p-2 text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]" title="Clear Filters">
+          <button (click)="clearFilters()" class="rounded-lg p-2 text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)] hover:text-[var(--color-primary)]" title="Clear Filters">
             <span class="material-symbols-outlined text-[20px]">filter_alt_off</span>
           </button>
-          <div class="mx-1 h-6 w-px bg-[var(--color-outline-variant)]/50"></div>
-          <span class="rounded-md bg-[var(--color-surface-container)] px-2 py-1 text-[11px] font-bold text-[var(--color-on-surface)]">24 Active</span>
         </div>
       </div>
 
@@ -120,111 +81,61 @@ interface IncidentRow {
           <table class="w-full border-collapse text-left">
             <thead class="sticky top-0 z-10 border-b border-[var(--color-outline-variant)]/40 bg-white/90 text-[11px] font-bold uppercase tracking-wider text-[var(--color-on-surface-variant)] shadow-sm backdrop-blur-md">
               <tr>
-                <th class="w-12 border-r border-[var(--color-outline-variant)]/20 p-4 text-center">
-                  <input type="checkbox" class="h-4 w-4 cursor-pointer rounded border-[var(--color-outline-variant)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
-                </th>
-                <th class="cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)]">
-                  <div class="flex items-center gap-1">
-                    ID / Location
-                    <span class="material-symbols-outlined text-[14px] text-[var(--color-outline)]">arrow_drop_down</span>
-                  </div>
-                </th>
-                <th class="hidden cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)] sm:table-cell">
-                  Type
-                </th>
-                <th class="cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)]">
-                  <div class="flex items-center gap-1">
-                    Priority
-                  </div>
-                </th>
-                <th class="hidden p-4 md:table-cell">
-                  SLA Status
-                </th>
-                <th class="hidden p-4 lg:table-cell">
-                  Assigned To
-                </th>
-                <th class="hidden cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)] xl:table-cell">
-                  <div class="flex items-center gap-1">
-                    Reported Date
-                    <span class="material-symbols-outlined text-[14px] text-[var(--color-outline)]">arrow_upward</span>
-                  </div>
-                </th>
-                <th class="p-4 text-right">
-                  Actions
-                </th>
+                <th class="w-12 border-r border-[var(--color-outline-variant)]/20 p-4 text-center">#</th>
+                <th class="cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)]">ID / Title</th>
+                <th class="hidden cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)] sm:table-cell">Type</th>
+                <th class="cursor-pointer p-4 transition-colors hover:bg-[var(--color-surface-container-low)]">Priority</th>
+                <th class="hidden p-4 md:table-cell">SLA Status</th>
+                <th class="hidden p-4 lg:table-cell">Reported</th>
+                <th class="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-[var(--color-outline-variant)]/20 bg-white">
-              @for (incident of incidents(); track incident.id) {
-                <tr class="cursor-default transition-colors hover:bg-[#F1F5F9]" (click)="viewDetail(incident.id)">
-                  <td class="border-r border-[var(--color-outline-variant)]/10 p-4 text-center" (click)="$event.stopPropagation()">
-                    <input type="checkbox" class="h-4 w-4 cursor-pointer rounded border-[var(--color-outline-variant)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
-                  </td>
+              @for (issue of issues(); track issue.issueId; let i = $index) {
+                <tr class="cursor-default transition-colors hover:bg-[#F1F5F9]">
+                  <td class="border-r border-[var(--color-outline-variant)]/10 p-4 text-center text-[12px] text-[var(--color-on-surface-variant)]">{{ (currentPage() - 1) * pageSize + i + 1 }}</td>
                   <td class="p-4">
                     <div class="flex items-center gap-3">
-                      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border" [class]="getTypeBgClass(incident.typeIcon)">
-                        <span class="material-symbols-outlined text-[20px]" [class]="getTypeIconClass(incident.typeIcon)">{{ incident.typeIcon }}</span>
+                      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-[var(--color-surface-container)]">
+                        <span class="material-symbols-outlined text-[20px] text-[var(--color-on-surface-variant)]">report</span>
                       </div>
                       <div>
-                        <div class="cursor-pointer text-[18px] font-semibold text-[var(--color-on-surface)] transition-colors hover:text-[var(--color-primary)]">
-                          {{ incident.id }}
-                        </div>
-                        <div class="max-w-[150px] truncate text-[11px] text-[var(--color-on-surface-variant)] sm:max-w-[200px]">
-                          {{ incident.location }}
-                        </div>
+                        <div class="text-[14px] font-semibold text-[var(--color-on-surface)]">{{ issue.publicCode }}</div>
+                        <div class="max-w-[200px] truncate text-[11px] text-[var(--color-on-surface-variant)]">{{ issue.title }}</div>
                       </div>
                     </div>
                   </td>
                   <td class="hidden p-4 sm:table-cell">
-                    <span class="text-[14px] text-[var(--color-on-surface)]">{{ incident.type }}</span>
+                    <span class="text-[14px] text-[var(--color-on-surface)]">{{ issue.issueTypeName }}</span>
                   </td>
                   <td class="p-4">
-                    <span [class]="getPriorityClass(incident.priority)" class="text-[11px] inline-flex items-center gap-1 rounded-full border px-2 py-1 font-bold">
-                      <span class="h-1.5 w-1.5 rounded-full"></span>
-                      {{ incident.priority }}
+                    <span class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-bold" [style.border-color]="issue.priorityColor" [style.color]="issue.priorityColor">
+                      {{ issue.priorityName }}
                     </span>
                   </td>
                   <td class="hidden p-4 md:table-cell">
-                    <div class="flex items-center gap-2">
-                      <div class="h-1.5 w-16 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-container)]">
-                        <div [class]="getSlaBarClass(incident.priority)" [style.width.%]="incident.slaPercent"></div>
-                      </div>
-                      <span class="text-[11px] font-bold" [class]="getSlaTextClass(incident.priority)">{{ incident.slaRemaining }}</span>
-                    </div>
+                    <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium" [style.background-color]="getSlaStatusColor(issue.slaStatus) + '20'" [style.color]="getSlaStatusColor(issue.slaStatus)">
+                      {{ formatSlaStatus(issue.slaStatus) }}
+                    </span>
                   </td>
-                  <td class="hidden p-4 lg:table-cell">
-                    @if (incident.assignedTo) {
-                      <div class="flex items-center gap-2">
-                        <div class="h-6 w-6 overflow-hidden rounded-full bg-[var(--color-surface-variant)]">
-                          @if (incident.assignedAvatar) {
-                            <img [src]="incident.assignedAvatar" [alt]="incident.assignedTo" class="h-full w-full object-cover" />
-                          } @else {
-                            <div class="flex h-full w-full items-center justify-center text-[10px] font-bold text-[var(--color-on-surface-variant)]">
-                              {{ incident.assignedTo.split(' ').map(n => n[0]).join('') }}
-                            </div>
-                          }
-                        </div>
-                        <span class="text-[14px] text-[var(--color-on-surface)]">{{ incident.assignedTo }}</span>
-                      </div>
-                    } @else {
-                      <button class="flex items-center gap-1 rounded-md border border-dashed border-[var(--color-outline)] px-2 py-1 text-[12px] font-medium text-[var(--color-on-surface-variant)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]">
-                        <span class="material-symbols-outlined text-[16px]">add</span>
-                        Assign
-                      </button>
-                    }
+                  <td class="hidden p-4 text-[14px] text-[var(--color-on-surface-variant)] lg:table-cell">
+                    {{ formatTimeAgo(issue.reportedAt) }}
                   </td>
-                  <td class="hidden p-4 text-[14px] text-[var(--color-on-surface-variant)] xl:table-cell">
-                    {{ incident.reportedAt }}
-                  </td>
-                  <td class="p-4 text-right" (click)="$event.stopPropagation()">
+                  <td class="p-4 text-right">
                     <div class="flex justify-end gap-1">
-                      <button class="rounded-md p-1 text-[var(--color-outline)] transition-colors hover:bg-[var(--color-primary-container)]/20 hover:text-[var(--color-primary)]" title="Re-assign">
+                      <button (click)="openAssignModal(issue)" class="rounded-md p-1 text-[var(--color-outline)] transition-colors hover:bg-[var(--color-primary-container)]/20 hover:text-[var(--color-primary)]" title="Assign">
                         <span class="material-symbols-outlined text-[20px]">person_add</span>
                       </button>
-                      <button class="rounded-md p-1 text-[var(--color-outline)] transition-colors hover:bg-[var(--color-primary-container)]/20 hover:text-[var(--color-primary)]" title="View Details">
+                      <button (click)="viewIncidentDetail(issue)" class="rounded-md p-1 text-[var(--color-outline)] transition-colors hover:bg-[var(--color-primary-container)]/20 hover:text-[var(--color-primary)]" title="View Details">
                         <span class="material-symbols-outlined text-[20px]">visibility</span>
                       </button>
                     </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="p-8 text-center text-[var(--color-on-surface-variant)]">
+                    No incidents found
                   </td>
                 </tr>
               }
@@ -234,133 +145,222 @@ interface IncidentRow {
 
         <!-- Pagination -->
         <div class="flex items-center justify-between border-t border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-bright)] p-4">
-          <span class="text-[12px] text-[var(--color-on-surface-variant)]">Showing 1 to 3 of 24 entries</span>
+          <span class="text-[12px] text-[var(--color-on-surface-variant)]">Showing {{ (currentPage() - 1) * pageSize + 1 }} to {{ Math.min(currentPage() * pageSize, totalCount()) }} of {{ totalCount() }} entries</span>
           <div class="flex items-center gap-1">
-            <button class="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-outline-variant)] text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-50" disabled>
+            <button (click)="prevPage()" [disabled]="currentPage() === 1" class="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-outline-variant)] text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-50">
               <span class="material-symbols-outlined text-[20px]">chevron_left</span>
             </button>
-            <button class="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--color-primary)] font-bold text-[var(--color-on-primary)]">1</button>
-            <button class="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-outline-variant)] text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container)]">2</button>
-            <button class="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-outline-variant)] text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container)]">3</button>
-            <span class="px-1 text-[var(--color-outline)]">...</span>
-            <button class="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-outline-variant)] text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)]">
+            @for (page of getPageNumbers(); track page) {
+              <button (click)="goToPage(page)" class="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-outline-variant)] text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container)]" [class.bg-[var(--color-primary)]]="page === currentPage()" [class.font-bold]="page === currentPage()" [class.text-[var(--color-on-primary)]]="page === currentPage()">
+                {{ page }}
+              </button>
+            }
+            <button (click)="nextPage()" [disabled]="currentPage() >= totalPages()" class="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-outline-variant)] text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-50">
               <span class="material-symbols-outlined text-[20px]">chevron_right</span>
             </button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Assign Modal -->
+    @if (showAssignModal()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" (click)="closeAssignModal()">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" (click)="$event.stopPropagation()">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-[18px] font-semibold text-[var(--color-on-surface)]">Assign Incident</h3>
+            <button (click)="closeAssignModal()" class="text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)]">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          @if (selectedIssue()) {
+            <div class="mb-4 rounded-lg bg-[var(--color-surface-container-low)] p-4">
+              <p class="text-[14px] font-medium text-[var(--color-on-surface)]">{{ selectedIssue()!.publicCode }}</p>
+              <p class="text-[12px] text-[var(--color-on-surface-variant)]">{{ selectedIssue()!.title }}</p>
+            </div>
+          }
+          <div class="mb-4">
+            <label class="mb-2 block text-[12px] font-medium text-[var(--color-on-surface-variant)]">Select Staff Member</label>
+            <select [(ngModel)]="selectedUserId" class="w-full rounded-lg border border-[var(--color-outline)] bg-white px-3 py-2 text-[14px] text-[var(--color-on-surface)] focus:border-[var(--color-primary)] focus:outline-none">
+              <option value="">Select a staff member...</option>
+              @for (member of staffList(); track member.userId) {
+                <option [value]="member.userId">{{ member.fullName }}</option>
+              }
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="mb-2 block text-[12px] font-medium text-[var(--color-on-surface-variant)]">Note (Optional)</label>
+            <textarea [(ngModel)]="assignNote" rows="3" class="w-full rounded-lg border border-[var(--color-outline)] bg-white px-3 py-2 text-[14px] text-[var(--color-on-surface)] focus:border-[var(--color-primary)] focus:outline-none" placeholder="Add a note..."></textarea>
+          </div>
+          <div class="flex justify-end gap-3">
+            <button (click)="closeAssignModal()" class="rounded-lg border border-[var(--color-outline)] px-4 py-2 text-[14px] font-medium text-[var(--color-on-surface)] hover:bg-[var(--color-surface-container-low)]">
+              Cancel
+            </button>
+            <button (click)="confirmAssign()" [disabled]="!selectedUserId || isAssigning()" class="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-[14px] font-medium text-[var(--color-on-primary)] hover:opacity-90 disabled:opacity-50">
+              {{ isAssigning() ? 'Assigning...' : 'Assign' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
-  styles: [
-    `
-      .material-symbols-outlined {
-        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      }
-    `,
-  ],
+  styles: [`
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  `],
 })
 export class StaffManagerIncidentsComponent implements OnInit {
+  private readonly dmService = inject(DepartmentManagerService)
+  private readonly router = inject(Router)
 
-  incidents = signal<IncidentRow[]>([
-    {
-      id: 'INC-2049',
-      type: 'Water Main Break',
-      typeIcon: 'water_damage',
-      location: '4th Ave & Main St, Ward 2',
-      priority: 'Critical',
-      slaRemaining: '2h left',
-      slaPercent: 90,
-      assignedTo: 'S. Connor',
-      reportedAt: 'Oct 24, 08:32 AM',
-    },
-    {
-      id: 'INC-2048',
-      type: 'Traffic Light Outage',
-      typeIcon: 'traffic',
-      location: 'I-95 Northbound Exit 4',
-      priority: 'High',
-      slaRemaining: '12h left',
-      slaPercent: 60,
-      assignedTo: '',
-      reportedAt: 'Oct 24, 07:15 AM',
-    },
-    {
-      id: 'INC-2047',
-      type: 'Severe Pothole',
-      typeIcon: 'maps_ar',
-      location: 'Elm St & Oak Ave, Ward 1',
-      priority: 'Medium',
-      slaRemaining: '48h left',
-      slaPercent: 20,
-      assignedTo: 'R. Jenkins',
-      reportedAt: 'Oct 23, 14:20 PM',
-    },
-  ])
+  Math = Math
+
+  issues = signal<DepartmentManagerIssueSummary[]>([])
+  staffList = signal<TeamWorkloadItem[]>([])
+  currentPage = signal(1)
+  pageSize = 10
+  totalCount = signal(0)
+
+  selectedFilter = ''
+  selectedPriority = ''
+  searchKeyword = ''
+
+  showAssignModal = signal(false)
+  selectedIssue = signal<DepartmentManagerIssueSummary | null>(null)
+  selectedUserId = ''
+  assignNote = ''
+  isAssigning = signal(false)
 
   ngOnInit(): void {
-    // TODO: Load incidents from API
+    this.loadIssues()
+    this.loadStaff()
   }
 
-  viewDetail(id: string): void {
-    const numericId = id.replace('INC-', '')
-    // TODO: Navigate to detail page when ready
-    console.log('View detail:', numericId)
+  totalPages(): number {
+    return Math.ceil(this.totalCount() / this.pageSize) || 1
   }
 
-  getPriorityClass(priority: string): string {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-[#FEF2F2] text-[#B91C1C] border-[#FCA5A5]'
-      case 'High':
-        return 'bg-[#FFF7ED] text-[#C2410C] border-[#FDBA74]'
-      case 'Medium':
-        return 'bg-[#F0FDF4] text-[#15803D] border-[#86EFAC]'
-      default:
-        return 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]'
+  loadIssues(): void {
+    const request: any = {
+      pageNumber: this.currentPage(),
+      pageSize: this.pageSize,
+      filter: this.selectedFilter || undefined,
+      keyword: this.searchKeyword || undefined,
+    }
+    if (this.selectedPriority) {
+      request.priorityId = parseInt(this.selectedPriority)
+    }
+
+    this.dmService.getIssues(request).subscribe({
+      next: (data) => {
+        this.issues.set(data)
+        this.totalCount.set(data.length)
+      },
+      error: (err) => console.error('Failed to load issues:', err),
+    })
+  }
+
+  loadStaff(): void {
+    this.dmService.getTeamWorkload().subscribe({
+      next: (data) => this.staffList.set(data.members),
+      error: (err) => console.error('Failed to load staff:', err),
+    })
+  }
+
+  onSearchChange(): void {
+    this.currentPage.set(1)
+    this.loadIssues()
+  }
+
+  clearFilters(): void {
+    this.selectedFilter = ''
+    this.selectedPriority = ''
+    this.searchKeyword = ''
+    this.currentPage.set(1)
+    this.loadIssues()
+  }
+
+  prevPage(): void {
+    if (this.currentPage() > 1) {
+      this.currentPage.update(p => p - 1)
+      this.loadIssues()
     }
   }
 
-  getSlaBarClass(priority: string): string {
-    switch (priority) {
-      case 'Critical':
-        return 'h-full bg-[var(--color-error)]'
-      case 'High':
-        return 'h-full bg-[var(--color-tertiary)]'
-      default:
-        return 'h-full bg-[var(--color-secondary)]'
+  nextPage(): void {
+    if (this.currentPage() < this.totalPages()) {
+      this.currentPage.update(p => p + 1)
+      this.loadIssues()
     }
   }
 
-  getSlaTextClass(priority: string): string {
-    switch (priority) {
-      case 'Critical':
-        return 'text-[var(--color-error)]'
-      case 'High':
-        return 'text-[var(--color-tertiary-container)]'
-      default:
-        return 'text-[var(--color-on-surface-variant)]'
+  goToPage(page: number): void {
+    this.currentPage.set(page)
+    this.loadIssues()
+  }
+
+  getPageNumbers(): number[] {
+    const total = this.totalPages()
+    const current = this.currentPage()
+    const pages: number[] = []
+    const start = Math.max(1, current - 2)
+    const end = Math.min(total, start + 4)
+    for (let i = start; i <= end; i++) pages.push(i)
+    return pages
+  }
+
+  openAssignModal(issue: DepartmentManagerIssueSummary): void {
+    this.selectedIssue.set(issue)
+    this.selectedUserId = ''
+    this.assignNote = ''
+    this.showAssignModal.set(true)
+  }
+
+  closeAssignModal(): void {
+    this.showAssignModal.set(false)
+    this.selectedIssue.set(null)
+  }
+
+  confirmAssign(): void {
+    const issue = this.selectedIssue()
+    if (!issue || !this.selectedUserId) return
+
+    this.isAssigning.set(true)
+    this.dmService.assignIssue(issue.issueId, { userId: this.selectedUserId, note: this.assignNote || undefined }).subscribe({
+      next: () => {
+        this.closeAssignModal()
+        this.isAssigning.set(false)
+        this.loadIssues()
+      },
+      error: (err) => {
+        console.error('Failed to assign:', err)
+        this.isAssigning.set(false)
+      },
+    })
+  }
+
+  formatTimeAgo(date: string): string {
+    return this.dmService.formatTimeAgo(date)
+  }
+
+  formatSlaStatus(status?: string): string {
+    if (!status) return 'N/A'
+    switch (status) {
+      case 'ON_TRACK': return 'On Track'
+      case 'AT_RISK': return 'At Risk'
+      case 'BREACHED': return 'Breached'
+      case 'RESPONSE_BREACHED': return 'Response Breached'
+      case 'RESOLVED': return 'Resolved'
+      default: return status
     }
   }
 
-  getTypeBgClass(icon: string): string {
-    switch (icon) {
-      case 'water_damage':
-        return 'bg-[var(--color-error-container)]/20 border-[var(--color-error-container)]/50'
-      case 'traffic':
-        return 'bg-[var(--color-tertiary-container)]/10 border-[var(--color-tertiary-container)]/30'
-      default:
-        return 'bg-[var(--color-surface-container)] border-[var(--color-outline-variant)]/30'
-    }
+  getSlaStatusColor(status?: string): string {
+    return this.dmService.getSlaStatusColor(status)
   }
 
-  getTypeIconClass(icon: string): string {
-    switch (icon) {
-      case 'water_damage':
-        return 'text-[var(--color-error)]'
-      case 'traffic':
-        return 'text-[var(--color-tertiary)]'
-      default:
-        return 'text-[var(--color-on-surface-variant)]'
-    }
+  viewIncidentDetail(issue: DepartmentManagerIssueSummary): void {
+    void this.router.navigate(['/staff-manager/incidents', issue.issueId])
   }
 }

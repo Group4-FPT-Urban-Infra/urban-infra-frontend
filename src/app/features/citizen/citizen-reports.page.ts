@@ -170,10 +170,15 @@ import type { IssueSummaryResponse, PagedResponse, IssueTypeLookup, IssueStatusL
                     <div
                       class="mt-auto flex items-center justify-between border-t border-[var(--color-surface-container)] pt-3"
                     >
-                      <span class="flex items-center gap-1 text-[var(--color-outline)]">
+                      <button
+                        type="button"
+                        class="flex items-center gap-1 text-[var(--color-outline)] hover:text-[var(--color-primary)]"
+                        [class.text-[var(--color-primary)]]="issue.hasUpvoted"
+                        (click)="toggleUpvote(issue, $event)"
+                      >
                         <span class="material-symbols-outlined text-[16px]">thumb_up</span>
                         <span class="text-[12px]">{{ issue.upvoteCount }}</span>
-                      </span>
+                      </button>
                       <span class="text-[11px] text-[var(--color-outline)]">
                         {{ formatTimeAgo(issue.reportedAt) }}
                       </span>
@@ -302,41 +307,26 @@ export class CitizenReportsComponent implements OnInit {
     this.isLoading.set(true)
     this.currentPage.set(page)
 
-    // For now, load from latest issues endpoint
-    this.dashboardService.getLatestIssues(100).subscribe({
-      next: (issues) => {
-        // Apply client-side filters
-        let filtered = issues
+    const selectedStatuses = this.issueStatuses()
+      .filter((status) => this.selectedStatusIds().includes(status.statusId))
+      .map((status) => status.statusCode)
+    const selectedTypes = this.selectedTypeIds()
 
-        // Filter by selected status IDs
-        if (this.selectedStatusIds().length > 0 && this.selectedStatusIds().length < this.issueStatuses().length) {
-          filtered = filtered.filter(issue =>
-            this.selectedStatusIds().includes(issue.status.id)
-          )
+    this.dashboardService.searchIssues({
+      page,
+      pageSize: this.pageSize,
+      keyword: this.searchQuery,
+      statusCodes: selectedStatuses.length === this.issueStatuses().length ? undefined : selectedStatuses,
+      issueTypeId: selectedTypes.length === 1 ? selectedTypes[0] : undefined,
+    }).subscribe({
+      next: (result) => {
+        let items = result.items
+        if (selectedTypes.length > 1 && selectedTypes.length < this.issueTypes().length) {
+          items = items.filter((issue) => selectedTypes.includes(issue.issueType.id))
         }
-
-        // Filter by selected type IDs
-        if (this.selectedTypeIds().length > 0 && this.selectedTypeIds().length < this.issueTypes().length) {
-          filtered = filtered.filter(issue =>
-            this.selectedTypeIds().includes(issue.issueType.id)
-          )
-        }
-
-        // Apply search
-        if (this.searchQuery.trim()) {
-          const query = this.searchQuery.toLowerCase()
-          filtered = filtered.filter(issue =>
-            issue.title.toLowerCase().includes(query) ||
-            issue.publicCode.toLowerCase().includes(query)
-          )
-        }
-
-        // Apply pagination
-        const start = (page - 1) * this.pageSize
-        const end = start + this.pageSize
-        this.issues.set(filtered.slice(start, end))
-        this.totalItems.set(filtered.length)
-        this.totalPages.set(Math.ceil(filtered.length / this.pageSize))
+        this.issues.set(items)
+        this.totalItems.set(result.totalItems)
+        this.totalPages.set(result.totalPages)
         this.isLoading.set(false)
       },
       error: () => {
@@ -389,6 +379,20 @@ export class CitizenReportsComponent implements OnInit {
 
   viewDetail(id: number): void {
     void this.router.navigate(['/citizen/reports', id])
+  }
+
+  toggleUpvote(issue: IssueSummaryResponse, event: Event): void {
+    event.stopPropagation()
+    const request = issue.hasUpvoted
+      ? this.dashboardService.removeUpvote(issue.id)
+      : this.dashboardService.upvoteIssue(issue.id)
+    request.subscribe({
+      next: (result) => {
+        this.issues.update((items) => items.map((item) => item.id === issue.id
+          ? { ...item, hasUpvoted: result.hasUpvoted, upvoteCount: result.upvoteCount }
+          : item))
+      },
+    })
   }
 
   formatTimeAgo(date: string | Date): string {

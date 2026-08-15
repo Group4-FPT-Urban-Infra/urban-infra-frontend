@@ -26,6 +26,21 @@ export const routes: Routes = [
         loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
       },
       {
+        path: 'map',
+        loadComponent: () =>
+          import('./features/citizen/citizen-map.page').then((m) => m.CitizenMapComponent),
+      },
+      {
+        path: 'incidents',
+        loadComponent: () =>
+          import('./features/citizen/citizen-reports.page').then((m) => m.CitizenReportsComponent),
+      },
+      {
+        path: 'incidents/:id',
+        loadComponent: () =>
+          import('./features/citizen/incident-detail.page').then((m) => m.IncidentDetailComponent),
+      },
+      {
         path: 'incident-reporting',
         canActivate: [authGuard],
         loadComponent: () =>
@@ -77,6 +92,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'escalation-rules',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/escalation-rules-management.page').then(
+            (m) => m.EscalationRulesManagementPage
+          ),
+      },
+      {
         path: 'incident-categories',
         canActivate: [roleGuard(['Admin'])],
         loadComponent: () =>
@@ -101,6 +124,7 @@ export const routes: Routes = [
   },
   {
     path: 'citizen',
+    canActivate: [roleGuard(['Citizen'])],
     loadComponent: () =>
       import('./shared/layout/citizen-layout.component').then((m) => m.CitizenLayoutComponent),
     children: [
@@ -181,7 +205,9 @@ export const routes: Routes = [
       {
         path: 'map',
         loadComponent: () =>
-          import('./features/staff/staff-map.page').then((m) => m.StaffMapComponent),
+
+          import('./features/staff-manager/staff-manager-map.page').then((m) => m.DepartmentManagerMapComponent),
+
       },
       {
         path: 'incidents',
@@ -202,6 +228,11 @@ export const routes: Routes = [
         path: 'staffs',
         loadComponent: () =>
           import('./features/staff-manager/staff-manager-staffs.page').then((m) => m.StaffManagerStaffsComponent),
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/staff-manager/staff-manager-profile.page').then((m) => m.StaffManagerProfileComponent),
       },
     ],
   },

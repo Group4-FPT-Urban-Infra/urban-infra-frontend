@@ -129,18 +129,30 @@ import { NotificationItem } from '../../core/models/notification.model'
               Staffs
             </a>
           }
-          @default {
-            <!-- Citizen Dashboard (default) -->
+          @case ('Admin') {
+            <!-- Admin Dashboard -->
             <a
-              routerLink="/citizen/dashboard"
+              routerLink="/admin"
               routerLinkActive="nav-link-active"
               [routerLinkActiveOptions]="{ exact: true }"
               class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
             >
-              Dashboard
+              Admin Dashboard
             </a>
+          }
+          @default {
+            @if (store.isAuthenticated()) {
+              <a
+                routerLink="/citizen/dashboard"
+                routerLinkActive="nav-link-active"
+                [routerLinkActiveOptions]="{ exact: true }"
+                class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
+              >
+                Dashboard
+              </a>
+            }
             <a
-              routerLink="/citizen/map"
+              [routerLink]="store.isAuthenticated() ? '/citizen/map' : '/map'"
               routerLinkActive="nav-link-active"
               [routerLinkActiveOptions]="{ exact: true }"
               class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
@@ -148,7 +160,7 @@ import { NotificationItem } from '../../core/models/notification.model'
               Map View
             </a>
             <a
-              routerLink="/citizen/reports"
+              [routerLink]="store.isAuthenticated() ? '/citizen/reports' : '/incidents'"
               routerLinkActive="nav-link-active"
               [routerLinkActiveOptions]="{ exact: true }"
               class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
@@ -172,6 +184,7 @@ import { NotificationItem } from '../../core/models/notification.model'
       <!-- Right: Actions + Avatar -->
       <div class="flex items-center gap-2 relative">
         <!-- Notifications -->
+        @if (store.isAuthenticated()) {
         <div class="relative">
           <button
             (click)="toggleNotificationsDropdown()"
@@ -260,6 +273,7 @@ import { NotificationItem } from '../../core/models/notification.model'
             </div>
           }
         </div>
+        }
 
         <!-- Help -->
         <button
@@ -358,7 +372,7 @@ export class HeaderComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadUnreadNotifications()
+    if (this.store.isAuthenticated()) this.loadUnreadNotifications()
   }
 
   loadUnreadNotifications(): void {
