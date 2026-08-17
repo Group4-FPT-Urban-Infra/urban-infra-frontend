@@ -1,19 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { ActivatedRoute, Router, RouterLink } from '@angular/router'
+import { ActivatedRoute, RouterLink } from '@angular/router'
 import { FormsModule } from '@angular/forms'
-
-interface InternalNote {
-  author: string
-  content: string
-  time: string
-}
-
-interface TimelineEvent {
-  status: string
-  description: string
-  time: string
-}
+import { StaffStore } from './staff.store'
 
 @Component({
   selector: 'app-staff-incident-detail',
@@ -27,10 +16,10 @@ interface TimelineEvent {
           <div class="mb-2 flex items-center gap-2 text-[12px] font-medium text-[var(--color-on-surface-variant)]">
             <a routerLink="/staff/incidents" class="hover:text-[var(--color-primary)]">Incidents</a>
             <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-            <span class="font-semibold text-[var(--color-on-surface)]">{{ incidentId() }}</span>
+            <span class="font-semibold text-[var(--color-on-surface)]">{{ store.selectedIncident()?.publicCode }}</span>
           </div>
           <h2 class="flex items-center gap-3 text-[28px] font-bold text-[var(--color-on-surface)]">
-            Massive Pothole on Arterial Route
+            {{ store.selectedIncident()?.title }}
             <span class="inline-flex items-center gap-1 rounded-full bg-[var(--color-error-container)] px-3 py-1 text-[11px] font-medium text-[var(--color-on-error-container)]">
               <span class="material-symbols-outlined text-[14px]">priority_high</span>
               High Priority
@@ -56,6 +45,9 @@ interface TimelineEvent {
       <!-- Bento Grid Layout -->
       <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <!-- Main Content Column -->
+        @if (store.loading().incidentDetail) {
+          <div class="xl:col-span-3 text-center p-8">Loading incident details...</div>
+        } @else if (store.selectedIncident(); as incident) {
         <div class="flex flex-col gap-6 xl:col-span-2">
           <!-- Details Card -->
           <section class="rounded-xl border border-[var(--color-outline-variant)]/30 bg-[var(--color-surface)]/80 p-6 shadow-sm backdrop-blur-md">
@@ -66,23 +58,23 @@ interface TimelineEvent {
             <div class="grid grid-cols-1 gap-4 text-[14px] md:grid-cols-2">
               <div>
                 <span class="mb-1 block text-[var(--color-on-surface-variant)]">Category</span>
-                <span class="font-semibold text-[var(--color-on-surface)]">Road Maintenance</span>
+                <span class="font-semibold text-[var(--color-on-surface)]">{{ incident.category }}</span>
               </div>
               <div>
                 <span class="mb-1 block text-[var(--color-on-surface-variant)]">Date Reported</span>
-                <span class="font-semibold text-[var(--color-on-surface)]">Oct 24, 2024 at 08:14 AM</span>
+                <span class="font-semibold text-[var(--color-on-surface)]">{{ incident.reportedAt | date:'medium' }}</span>
               </div>
               <div class="md:col-span-2">
                 <span class="mb-1 block text-[var(--color-on-surface-variant)]">Location</span>
                 <span class="flex items-center gap-2 font-semibold text-[var(--color-on-surface)]">
                   <span class="material-symbols-outlined text-[16px] text-[var(--color-outline)]">location_on</span>
-                  4500 Block, Westheimer Rd, Near Post Oak Blvd
+                  {{ incident.location.address }}
                 </span>
               </div>
               <div class="md:col-span-2">
                 <span class="mb-1 block text-[var(--color-on-surface-variant)]">Description provided by Citizen</span>
                 <p class="mt-2 rounded-lg bg-[var(--color-surface-container-low)] p-4 text-[var(--color-on-surface)]">
-                  "There is a crater-sized pothole in the right lane heading eastbound. Multiple cars hitting it hard. Rebar is visible at the bottom."
+                  "{{ incident.description }}"
                 </p>
               </div>
             </div>
@@ -124,7 +116,7 @@ interface TimelineEvent {
               Internal Notes History
             </h3>
             <div class="mb-6 flex max-h-64 flex-col gap-4 overflow-y-auto pr-2">
-              @for (note of notes(); track note.author) {
+              @for (note of incident.internalNotes; track note.author) {
                 <div class="rounded-lg border-l-4 border-[var(--color-tertiary)] bg-[var(--color-surface-container-low)] p-4">
                   <div class="mb-1 flex items-start justify-between">
                     <span class="text-[12px] font-semibold text-[var(--color-on-surface)]">{{ note.author }}</span>
@@ -158,19 +150,19 @@ interface TimelineEvent {
             </h3>
             <div class="flex flex-col gap-4 text-[14px]">
               <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-primary-fixed)] text-[18px] font-bold text-[var(--color-on-primary-fixed)]">JD</div>
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-primary-fixed)] text-[18px] font-bold text-[var(--color-on-primary-fixed)]">{{ incident.reporter.initials }}</div>
                 <div>
-                  <div class="font-semibold text-[var(--color-on-surface)]">Jane Doe</div>
-                  <div class="text-[11px] text-[var(--color-on-surface-variant)]">Verified Resident</div>
+                  <div class="font-semibold text-[var(--color-on-surface)]">{{ incident.reporter.name }}</div>
+                  <div class="text-[11px] text-[var(--color-on-surface-variant)]">{{ incident.reporter.type }}</div>
                 </div>
               </div>
               <div class="flex items-center gap-3 text-[var(--color-on-surface)]">
                 <span class="material-symbols-outlined text-[20px] text-[var(--color-outline)]">phone</span>
-                (555) 019-2834
+                {{ incident.reporter.phone || 'Not provided' }}
               </div>
               <div class="flex items-center gap-3 text-[var(--color-on-surface)]">
                 <span class="material-symbols-outlined text-[20px] text-[var(--color-outline)]">mail</span>
-                jane.doe.resident&#64;email.com
+                {{ incident.reporter.email || 'Not provided' }}
               </div>
               <button class="w-full rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-surface)] py-2 text-[12px] font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-container)]/20">
                 Message Citizen
@@ -190,18 +182,14 @@ interface TimelineEvent {
               <p class="text-[11px] text-[var(--color-outline)]">or click to browse</p>
             </div>
             <div class="grid grid-cols-2 gap-3">
-              <div class="group relative aspect-square overflow-hidden rounded-md border border-[var(--color-outline-variant)]">
-                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW91o5mNscd9vDXjk0Wtz3l_TaATa95BEEoxYkyXED54Py3jgWSsLn8_GqgPjRVQRvKDqWCDjkKb0gnIkDw7NPPX5tx_Ck9ATh7XOZYxc421RGgNH4US-KhjhvRxOfTphdPAAocx1qOi0dwxaimdATpAHTM3QxMfyULhtvM_yT2dVu1UzkLEqDBy5l394UvA27Twqz6esIv2SSZ3E-o8OajD_98bB8zFsvfgQMLaMSf1NVR1Gnhvw" alt="Before repair" class="h-full w-full object-cover" />
-                <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-                  <span class="material-symbols-outlined cursor-pointer text-[var(--color-on-inverse-surface)]">zoom_in</span>
+              @for (media of incident.media; track media.url) {
+                <div class="group relative aspect-square overflow-hidden rounded-md border border-[var(--color-outline-variant)]">
+                  <img [src]="media.url" [alt]="incident.title" class="h-full w-full object-cover" />
+                  <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+                    <span class="material-symbols-outlined cursor-pointer text-[var(--color-on-inverse-surface)]">zoom_in</span>
+                  </div>
                 </div>
-              </div>
-              <div class="group relative aspect-square overflow-hidden rounded-md border border-[var(--color-outline-variant)]">
-                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDHM8vL0OOrBLByI1Hg1v1iZnybv8HD3tIqTTWIPh_FOe44Q8jnty6QsDdoxkOhaAttx39YEMc7CKKL2aheauCfsJIg3LuOflrO_Paf8_i0AqA-4AtizrGCyiGw_fP5vg1H3iwNPHNCz-QyewKqJ60bEOAD441KQWN1lyOQt-K9Avuixhs1EtA39pFVmYQwQ8pcYaV6eGjyEUnv8wPzRM-SWY8yPFCJX6s0JmPmSh4Alc_8iWzSis" alt="After repair" class="h-full w-full object-cover" />
-                <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-                  <span class="material-symbols-outlined cursor-pointer text-[var(--color-on-inverse-surface)]">zoom_in</span>
-                </div>
-              </div>
+              }
             </div>
           </section>
 
@@ -212,7 +200,7 @@ interface TimelineEvent {
               Action Log
             </h3>
             <div class="relative ml-4 flex flex-col gap-4 border-l-2 border-[var(--color-outline-variant)] py-4">
-              @for (event of timeline(); track event.status) {
+              @for (event of incident.actionLog; track event.status) {
                 <div class="relative pl-6">
                   <div class="absolute left-[-5px] top-1 h-2 w-2 rounded-full bg-[var(--color-primary)] ring-4 ring-[var(--color-surface)]"></div>
                   <p class="text-[12px] text-[var(--color-on-surface)]">
@@ -224,6 +212,9 @@ interface TimelineEvent {
             </div>
           </section>
         </div>
+        } @else if (store.error()) {
+          <div class="xl:col-span-3 text-center p-8 text-red-600">{{ store.error() }}</div>
+        }
       </div>
     </div>
   `,
@@ -237,33 +228,12 @@ interface TimelineEvent {
 })
 export class StaffIncidentDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
-  private readonly router = inject(Router)
-
-  incidentId = signal('')
-
-  notes = signal<InternalNote[]>([
-    {
-      author: 'Dispatcher Mike T.',
-      content: 'Assigned to Crew B. Traffic control might be needed based on location.',
-      time: 'Oct 24, 08:30 AM',
-    },
-    {
-      author: 'Crew Lead Sarah K.',
-      content: 'Arrived on site. It\'s worse than described. Need additional hot mix. Requested partial lane closure.',
-      time: 'Oct 24, 10:15 AM',
-    },
-  ])
-
-  timeline = signal<TimelineEvent[]>([
-    { status: 'In Progress', description: 'by Crew Lead Sarah K.', time: 'Oct 24, 10:00 AM' },
-    { status: 'Assigned', description: 'by Dispatcher Mike T.', time: 'Oct 24, 08:30 AM' },
-    { status: 'Created', description: 'Incident created via Public Portal', time: 'Oct 24, 08:14 AM' },
-  ])
+  protected readonly store = inject(StaffStore)
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')
     if (id) {
-      this.incidentId.set(`INC-${id}`)
+      this.store.loadIncidentDetail(id)
     }
   }
 }
