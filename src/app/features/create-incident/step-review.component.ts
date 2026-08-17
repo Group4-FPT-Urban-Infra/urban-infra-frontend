@@ -216,10 +216,9 @@ export class StepReviewComponent {
   }
 
   getIssueTypeName(): string {
-    const issueTypeId = this.store.details().issueTypeId
-    if (!issueTypeId) return ''
-    const issueType = this.store.issueTypes().find((t) => t.issueTypeId === issueTypeId)
-    return issueType?.typeName || ''
+    const ids = this.store.details().issueTypeIds
+    return this.store.issueTypes().filter((type) => ids.includes(type.issueTypeId))
+      .map((type) => type.typeName).join(', ')
   }
 
   getPriorityName(): string {

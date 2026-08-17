@@ -13,7 +13,7 @@ import { AuthStore } from '../../core/auth/auth.store'
       class="fixed top-0 left-0 z-40 hidden h-screen w-[280px] flex-col border-r border-[var(--color-outline-variant)] bg-[var(--color-surface)] py-6 shadow-sm md:flex"
     >
       <!-- Header -->
-      <div class="mb-6 flex items-center gap-3 px-6 pb-4 border-b border-[var(--color-outline-variant)]">
+      <a routerLink="/" class="mb-6 flex items-center gap-3 px-6 pb-4 border-b border-[var(--color-outline-variant)]">
         <img
           alt="Organization Logo"
           class="h-10 w-10 rounded-lg object-cover"
@@ -27,7 +27,7 @@ import { AuthStore } from '../../core/auth/auth.store'
             City Management Portal
           </p>
         </div>
-      </div>
+      </a>
 
       <!-- CTA Button (Authenticated only) -->
       @if (authStore.isAuthenticated()) {
@@ -79,29 +79,10 @@ import { AuthStore } from '../../core/auth/auth.store'
           Reports
         </a>
 
-        <!-- Analytics Tab (Authenticated only) -->
-        @if (authStore.isAuthenticated()) {
-          <a
-            routerLink="/reports-analytics"
-            routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
-            class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
-          >
-            <span class="material-symbols-outlined">leaderboard</span>
-            Analytics
-          </a>
-        }
       </nav>
 
       <!-- Footer Tabs -->
       <div class="mt-auto flex flex-col gap-1 border-t border-[var(--color-outline-variant)] px-2 pt-4 pb-4">
-        <a
-          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
-          href="#"
-        >
-          <span class="material-symbols-outlined">contact_support</span>
-          Support
-        </a>
-
         @if (authStore.isAuthenticated()) {
           <a
             class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-error)] transition-all hover:bg-[var(--color-error-container)]"

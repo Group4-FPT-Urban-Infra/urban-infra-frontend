@@ -26,7 +26,7 @@ import { NotificationItem } from '../../core/models/notification.model'
       <!-- Left: Brand + Search -->
       <div class="flex items-center gap-6">
         <!-- Brand -->
-        <div class="flex items-center gap-2">
+        <a routerLink="/" class="flex items-center gap-2">
           <span
             class="material-symbols-outlined text-[var(--color-primary)]"
             style="font-variation-settings:'FILL' 1; font-size:28px"
@@ -36,7 +36,7 @@ import { NotificationItem } from '../../core/models/notification.model'
           <span class="text-xl font-bold tracking-tight text-[var(--color-primary)]"
             >CivicShield</span
           >
-        </div>
+        </a>
 
         <!-- Search (desktop) -->
         <div
@@ -239,7 +239,7 @@ import { NotificationItem } from '../../core/models/notification.model'
                   </div>
                 } @else {
                   @for (item of unreadNotifications(); track item.id) {
-                    <div class="p-3 hover:bg-[var(--color-surface-variant)]/30 transition-colors flex gap-3 items-start group">
+                    <div (click)="openNotification(item)" class="cursor-pointer p-3 hover:bg-[var(--color-surface-variant)]/30 transition-colors flex gap-3 items-start group">
                       <div class="mt-0.5">
                         @if (item.notificationType === 'ESCALATION') {
                           <span class="material-symbols-outlined text-amber-500 text-xl">warning</span>
@@ -274,17 +274,6 @@ import { NotificationItem } from '../../core/models/notification.model'
           }
         </div>
         }
-
-        <!-- Help -->
-        <button
-          class="hidden rounded-full p-2 text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50 sm:block"
-          title="Help"
-          type="button"
-        >
-          <span class="material-symbols-outlined text-[22px]" aria-hidden="true"
-            >help_outline</span
-          >
-        </button>
 
         <!-- Language Selector -->
         <select
@@ -395,6 +384,15 @@ export class HeaderComponent implements OnInit {
         this.unreadNotifications.update((list) => list.filter((n) => n.id !== id))
       },
     })
+  }
+
+  openNotification(item: NotificationItem): void {
+    const userId = this.store.user()?.id
+    this.notificationService.markAsRead(item.id, userId).subscribe({
+      next: () => this.unreadNotifications.update((list) => list.filter((n) => n.id !== item.id)),
+    })
+    this.showDropdown.set(false)
+    if (item.issueId) void this.router.navigate(['/citizen/reports', item.issueId])
   }
 
   markAllAsRead(): void {
