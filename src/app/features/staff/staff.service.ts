@@ -9,6 +9,7 @@ import {
   StaffMapIssue,
   StaffIncident,
   StaffIncidentDetail,
+  StaffPagedResponse,
   StaffApiFilters,
 } from './staff.types'
 
@@ -34,9 +35,9 @@ export class StaffService {
     return this.http.get<StaffMapIssue[]>(`${this.apiUrl}/issues/map`, { params })
   }
 
-  getStaffIncidents(filters?: StaffApiFilters): Observable<StaffIncident[]> {
+  getStaffIncidents(filters?: StaffApiFilters): Observable<StaffPagedResponse<StaffIncident>> {
     const params = this.buildParams(filters)
-    return this.http.get<StaffIncident[]>(`${this.apiUrl}/incidents`, { params })
+    return this.http.get<StaffPagedResponse<StaffIncident>>(`${this.apiUrl}/incidents`, { params })
   }
 
   getStaffIncident(id: string): Observable<StaffIncidentDetail> {

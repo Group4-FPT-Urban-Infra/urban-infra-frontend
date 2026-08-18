@@ -1,8 +1,18 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
+import { Component, inject, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef, effect } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { AuthStore } from '../../core/auth/auth.store'
 import { StaffStore } from './staff.store'
 import { RouterLink } from '@angular/router'
+import { StaffTask } from './staff.types'
+import * as L from 'leaflet'
+
+// Fix Leaflet default icon paths to prevent 404 errors
+delete (L.Icon.Default.prototype as any)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
 
 @Component({
   selector: 'app-staff-home',
@@ -23,21 +33,17 @@ import { RouterLink } from '@angular/router'
             Here is your daily incident overview for District 4.
           </p>
         </div>
-        <div class="hidden items-center gap-4 md:flex">
-          <button class="flex items-center gap-2 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] px-4 py-2 text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container-low)]">
-            <span class="material-symbols-outlined text-[16px]">filter_list</span>
-            Filter
-          </button>
-          <button class="flex items-center gap-2 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] px-4 py-2 text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container-low)]">
-            <span class="material-symbols-outlined text-[16px]">download</span>
-            Export
-          </button>
-        </div>
+        <!-- Removed unused Filter/Export buttons as per stabilization goals -->
       </header>
 
       <!-- Metrics Bento Grid -->
       @if (store.loading().dashboard) {
-        <div class="text-center p-8">Loading dashboard data...</div>
+        <!-- Skeleton Loader for KPIs -->
+        <div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="h-[136px] animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+          }
+        </div>
       } @else if (store.dashboardSummary(); as summary) {
       <div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <!-- Assigned Incidents -->
@@ -52,9 +58,8 @@ import { RouterLink } from '@angular/router'
           </div>
           <div>
             <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">{{ summary.assignedTasks }}</h3>
-            <p class="mt-1 flex items-center gap-1 text-[11px] font-medium text-[var(--color-secondary)]">
-              <span class="material-symbols-outlined text-[14px]">arrow_downward</span>
-              12% from yesterday
+            <p class="mt-1 text-[11px] font-medium text-[var(--color-on-surface-variant)]">
+              Tasks assigned to you
             </p>
           </div>
         </div>
@@ -71,9 +76,8 @@ import { RouterLink } from '@angular/router'
           </div>
           <div>
             <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">{{ summary.highPriorityTasks }}</h3>
-            <p class="mt-1 flex items-center gap-1 text-[11px] font-medium text-[var(--color-error)]">
-              <span class="material-symbols-outlined text-[14px]">arrow_upward</span>
-              3 new in last hour
+            <p class="mt-1 text-[11px] font-medium text-[var(--color-on-surface-variant)]">
+              Require immediate attention
             </p>
           </div>
         </div>
@@ -90,9 +94,8 @@ import { RouterLink } from '@angular/router'
           </div>
           <div>
             <h3 class="text-[28px] font-bold text-[var(--color-on-surface)]">{{ summary.avgResolutionTimeHours }}h</h3>
-            <p class="mt-1 flex items-center gap-1 text-[11px] font-medium text-[var(--color-secondary)]">
-              <span class="material-symbols-outlined text-[14px]">check_circle</span>
-              On target (5h SLA)
+            <p class="mt-1 text-[11px] font-medium text-[var(--color-on-surface-variant)]">
+              Average time to resolve
             </p>
           </div>
         </div>
@@ -169,29 +172,23 @@ import { RouterLink } from '@angular/router'
         <div class="flex flex-col gap-6">
           <!-- Map Widget -->
           <section class="relative h-[300px] overflow-hidden rounded-xl border border-[var(--color-outline-variant)]/50 bg-[var(--color-surface-container-lowest)] shadow-sm">
-            <div class="absolute inset-0 bg-cover bg-center opacity-60"
-              style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAs8MiUe91CwBny2dWxXpk_BecAYbdpuoliWBM30k3glyKH8ZG2QkTTFeQLGfwtJpfnqAQN-yNB1JXQ3gL2AGKOJCLp6kHGbRqk9EL2E85IvKxBgBZPdvD1XncJfAIM9pcqVPq6OWAuHbevi2X7bbK9WsQKeaJ3nd1IpQZ6N8vRHHj_b9JH4LbZt8WETjcHYfF6UsMYwzgGeb6I-sSbHDIgQC2cCL5Zh0B_Wf3ErfS2C-ld2Qa0708');"
-            ></div>
+            <div #dashboardMap class="h-full w-full bg-gray-200"></div>
             <!-- Map Overlay/Controls -->
-            <div class="absolute inset-0 flex flex-col justify-between p-4">
+            <div class="pointer-events-none absolute inset-0 flex flex-col justify-between p-4">
               <div class="flex items-center justify-between">
                 <div class="rounded-md bg-white/70 px-2 py-1 text-[11px] font-medium text-[var(--color-on-surface)] shadow-sm backdrop-blur-md">
-                  Active Field Units: 14
+                  District 4 Overview
                 </div>
-                <button class="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 shadow-sm transition-colors hover:bg-white/90">
+                <a routerLink="/staff/map" class="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/70 shadow-sm transition-colors hover:bg-white/90">
                   <span class="material-symbols-outlined text-[18px]">fullscreen</span>
-                </button>
+                </a>
               </div>
-              <!-- Map Pins -->
-              <div class="absolute top-1/3 left-1/4 h-4 w-4 animate-pulse rounded-full border-2 border-white bg-[var(--color-error)] shadow-md"></div>
-              <div class="absolute top-1/2 left-2/3 h-4 w-4 rounded-full border-2 border-white bg-[var(--color-tertiary-fixed)] shadow-md"></div>
-              <div class="absolute bottom-1/4 left-1/2 h-4 w-4 rounded-full border-2 border-white bg-[var(--color-primary)] shadow-md"></div>
               <!-- Info Box -->
               <div class="flex items-center gap-2 rounded-lg bg-white/70 p-3 shadow-sm backdrop-blur-md">
                 <span class="material-symbols-outlined text-[var(--color-primary)]">my_location</span>
                 <div>
-                  <p class="text-[12px] font-medium text-[var(--color-on-surface)]">District 4 Overview</p>
-                  <p class="text-[11px] text-[var(--color-on-surface-variant)]">3 Active Critical Incidents</p>
+                  <p class="text-[12px] font-medium text-[var(--color-on-surface)]">Map of Assigned Tasks</p>
+                  <p class="text-[11px] text-[var(--color-on-surface-variant)]">{{ mapMessage }}</p>
                 </div>
               </div>
             </div>
@@ -240,12 +237,121 @@ import { RouterLink } from '@angular/router'
     `,
   ],
 })
-export class StaffHomeComponent implements OnInit {
+export class StaffHomeComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('dashboardMap', { static: true }) private mapContainer!: ElementRef<HTMLDivElement>
+  private map!: L.Map
+  private userLocationMarker: L.Marker | null = null
+  private markersLayer = L.layerGroup()
+  protected mapMessage = 'Loading map data...'
+
   protected readonly authStore = inject(AuthStore)
   protected readonly store = inject(StaffStore)
 
+  constructor() {
+    effect(() => {
+      // This effect will run whenever the tasks from the store change.
+      const tasks = this.store.myTasks()
+      if (this.map) {
+        this.updateMapMarkers(tasks)
+      }
+    })
+  }
+
   ngOnInit(): void {
-    this.store.loadDashboardData()
+     this.store.loadDashboardData() // Tạm thời comment lại để phát triển UI mà không cần đăng nhập
+  }
+
+  ngAfterViewInit(): void {
+    this.initMap()
+  }
+
+  ngOnDestroy(): void {
+    if (this.map) {
+      this.map.remove()
+    }
+  }
+
+  private initMap(): void {
+    // A small delay to ensure the container is rendered before map initialization.
+    setTimeout(() => {
+      this.map = L.map(this.mapContainer.nativeElement, {
+        center: [10.7769, 106.7009], // Default to HCMC, District 1
+        zoom: 14,
+        zoomControl: false,
+        attributionControl: false,
+      })
+      this.markersLayer.addTo(this.map)
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(this.map)
+
+      // Initial marker update in case data is already loaded
+      this.updateMapMarkers(this.store.myTasks())
+
+      // Get user's current location and center the map
+      this.requestUserLocation()
+    }, 100)
+  }
+
+  private updateMapMarkers(tasks: StaffTask[]): void {
+    this.markersLayer.clearLayers()
+
+    const tasksWithCoords = tasks.filter(
+      (task) => task.latitude != null && task.longitude != null,
+    )
+
+    if (tasksWithCoords.length === 0) {
+      this.mapMessage = 'No tasks with coordinates to display.'
+      return
+    }
+
+    this.mapMessage = `${tasksWithCoords.length} tasks shown on map.`
+    const markers: L.Marker[] = []
+    tasksWithCoords.forEach((task) => {
+      const marker = L.marker([task.latitude!, task.longitude!]).bindPopup(
+        `<b>${task.id}</b><br>${task.title}`,
+      )
+      markers.push(marker)
+    })
+
+    markers.forEach((marker) => this.markersLayer.addLayer(marker))
+
+    if (markers.length > 0) {
+      const group = L.featureGroup(markers)
+      this.map.fitBounds(group.getBounds().pad(0.2))
+    }
+  }
+
+  private requestUserLocation(): void {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLatLng: L.LatLngTuple = [
+            position.coords.latitude,
+            position.coords.longitude,
+          ];
+          this.map.setView(userLatLng, 15); // Center map on user
+
+          // Add a marker for the user's location
+          if (this.userLocationMarker) {
+            this.userLocationMarker.setLatLng(userLatLng);
+          } else {
+            this.userLocationMarker = L.marker(userLatLng, {
+              icon: L.divIcon({
+                className: 'h-4 w-4 rounded-full border-2 border-white bg-blue-500 shadow-lg',
+                html: '',
+              }),
+            }).addTo(this.map).bindPopup('Vị trí hiện tại của bạn');
+          }
+        },
+        () => {
+          // Could not get location. Map remains at default center.
+          console.warn('Could not get user location for dashboard map.');
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+      );
+    }
   }
 
   userName(): string {

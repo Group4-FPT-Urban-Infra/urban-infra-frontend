@@ -157,6 +157,7 @@ export const routes: Routes = [
   },
   {
     path: 'staff',
+    // canActivate: [roleGuard(['Staff'])], // Tạm thời vô hiệu hóa để phát triển UI
     loadComponent: () =>
       import('./shared/layout/staff-layout.component').then((m) => m.StaffLayoutComponent),
     children: [

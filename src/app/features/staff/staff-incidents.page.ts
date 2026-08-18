@@ -220,21 +220,40 @@ import { StaffApiFilters } from './staff.types'
 
         <!-- Pagination -->
         <div class="flex items-center justify-between border-t border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-low)] p-4">
-          <p class="text-[12px] text-[var(--color-on-surface-variant)]">
-            Showing 1 to 3 of 42 entries
-          </p>
-          <div class="flex items-center gap-1">
-            <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-outline-variant)] text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-50" disabled>
-              <span class="material-symbols-outlined text-[18px]">chevron_left</span>
-            </button>
-            <button class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] font-bold text-[var(--color-on-primary)]">1</button>
-            <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-outline-variant)] text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container)]">2</button>
-            <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-outline-variant)] text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container)]">3</button>
-            <span class="px-1 text-[var(--color-outline)]">...</span>
-            <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-outline-variant)] text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)]">
-              <span class="material-symbols-outlined text-[18px]">chevron_right</span>
-            </button>
-          </div>
+          <p class="text-[12px] text-[var(--color-on-surface-variant)]">{{ paginationSummary() }}</p>
+          @if (pagination().totalPages > 1) {
+            <div class="flex items-center gap-1">
+              <button
+                (click)="changePage(pagination().page - 1)"
+                [disabled]="pagination().page === 1"
+                class="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-outline-variant)] text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+              </button>
+              @for (page of getPageNumbers(); track $index) {
+                @if (page === '...') {
+                  <span class="px-1 text-[var(--color-outline)]">...</span>
+                } @else {
+                  <button
+                    (click)="changePage(+page)"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-[12px] font-medium transition-colors"
+                    [class.bg-[var(--color-primary)]]="pagination().page === page"
+                    [class.text-[var(--color-on-primary)]]="pagination().page === page"
+                    [class.font-bold]="pagination().page === page"
+                    [class.border]="pagination().page !== page"
+                    [class.border-[var(--color-outline-variant)]]="pagination().page !== page"
+                    [class.text-[var(--color-on-surface)]]="pagination().page !== page"
+                    [class.hover:bg-[var(--color-surface-container)]]="pagination().page !== page"
+                  >
+                    {{ page }}
+                  </button>
+                }
+              }
+              <button (click)="changePage(pagination().page + 1)" [disabled]="pagination().page === pagination().totalPages" class="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-outline-variant)] text-[var(--color-outline)] transition-colors hover:bg-[var(--color-surface-container)] disabled:cursor-not-allowed disabled:opacity-50">
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+              </button>
+            </div>
+          }
         </div>
       </div>
     </div>
@@ -259,6 +278,7 @@ export class StaffIncidentsComponent implements OnInit {
   protected readonly store = inject(StaffStore)
 
   incidents = this.store.incidents
+  pagination = this.store.pagination
   claimingIncidentId = signal<string | null>(null)
 
   // Local model bindings for Form Controls
@@ -288,6 +308,8 @@ export class StaffIncidentsComponent implements OnInit {
       unassignedOnly: this.selectedAssignment === 'unassigned',
       priorities: this.selectedPriority ? [this.selectedPriority] : undefined,
       statuses: this.selectedStatus ? [this.selectedStatus] : undefined,
+      page: this.currentPage,
+      pageSize: this.pageSize,
     }
 
     this.store.loadIncidents(filters)
@@ -300,6 +322,43 @@ export class StaffIncidentsComponent implements OnInit {
     this.selectedStatus = ''
     this.currentPage = 1
     this.applyFilters()
+  }
+
+  changePage(page: number): void {
+    if (page >= 1 && page <= this.pagination().totalPages && page !== this.currentPage) {
+      this.currentPage = page
+      this.applyFilters()
+    }
+  }
+
+  paginationSummary = computed(() => {
+    const p = this.pagination()
+    if (p.totalItems === 0) {
+      return '0 entries'
+    }
+    const start = (p.page - 1) * p.pageSize + 1
+    const end = Math.min(p.page * p.pageSize, p.totalItems)
+    return `Showing ${start} to ${end} of ${p.totalItems} entries`
+  })
+
+  getPageNumbers(): (number | string)[] {
+    const total = this.pagination().totalPages
+    const current = this.pagination().page
+    if (total <= 1) return []
+
+    const pages: (number | string)[] = []
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (current > 3) pages.push('...')
+      for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+        pages.push(i)
+      }
+      if (current < total - 2) pages.push('...')
+      pages.push(total)
+    }
+    return pages
   }
 
   viewDetail(id: string): void {
