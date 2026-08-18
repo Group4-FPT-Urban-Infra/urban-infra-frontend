@@ -18,25 +18,33 @@ import { IncidentStore } from './incident.store'
 
       <!-- Form Layout -->
       <div class="flex flex-col gap-6">
-        <!-- Multiple issue types: mỗi lựa chọn sẽ sinh một Issue trong cùng Report. -->
-        <div class="flex flex-col gap-1">
-          <label
-            class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]"
-            for="issueType"
-          >
+        <!-- Issue Type Multi-Select (Chips) -->
+        <div class="flex flex-col gap-2">
+          <label class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]">
             Incident Types <span class="text-[var(--color-error)]">*</span>
           </label>
-          <div id="issueType" class="grid grid-cols-1 gap-2 rounded-lg border border-[var(--color-outline-variant)] p-3 sm:grid-cols-2">
+          <div class="flex flex-wrap gap-2">
             @for (type of store.issueTypes(); track type.issueTypeId) {
-              <label class="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-[var(--color-surface-container)]">
-                <input type="checkbox" [checked]="selectedIssueTypeIds.includes(type.issueTypeId)"
-                  (change)="toggleIssueType(type.issueTypeId, $event)"
-                  class="h-4 w-4 rounded border-[var(--color-outline-variant)]" />
-                <span class="text-sm">{{ type.typeName }}</span>
-              </label>
+              <button
+                type="button"
+                (click)="onIssueTypeToggle(type.issueTypeId)"
+                class="px-3 py-2 rounded-full border text-[12px] font-medium transition-all"
+                [class]="getIssueTypeClasses(type.issueTypeId)"
+                [title]="type.description || type.typeName"
+              >
+                {{ type.typeName }}
+              </button>
             }
           </div>
-          <span class="text-[11px] text-[var(--color-on-surface-variant)]">Đã chọn {{ selectedIssueTypeIds.length }} loại; hệ thống sẽ tạo tương ứng {{ selectedIssueTypeIds.length }} issue.</span>
+          @if (selectedIssueTypeIds.length === 0) {
+            <p class="text-xs text-[var(--color-on-surface-variant)]">
+              Select at least one incident type. You can select up to 5 types.
+            </p>
+          } @else {
+            <p class="text-xs text-[var(--color-on-surface-variant)]">
+              {{ selectedIssueTypeIds.length }}/5 incident types selected
+            </p>
+          }
         </div>
 
         <!-- Title Input -->
@@ -182,11 +190,19 @@ export class StepDetailComponent implements OnInit {
     )
   }
 
-  toggleIssueType(issueTypeId: number, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked
-    this.selectedIssueTypeIds = checked
-      ? [...this.selectedIssueTypeIds, issueTypeId]
-      : this.selectedIssueTypeIds.filter((id) => id !== issueTypeId)
+  isIssueTypeSelected(issueTypeId: number): boolean {
+    return this.selectedIssueTypeIds.includes(issueTypeId)
+  }
+
+  onIssueTypeToggle(issueTypeId: number): void {
+    if (this.isIssueTypeSelected(issueTypeId)) {
+      this.selectedIssueTypeIds = this.selectedIssueTypeIds.filter(id => id !== issueTypeId)
+    } else {
+      // Max 5 issue types allowed
+      if (this.selectedIssueTypeIds.length < 5) {
+        this.selectedIssueTypeIds = [...this.selectedIssueTypeIds, issueTypeId]
+      }
+    }
     this.store.setIssueTypeIds(this.selectedIssueTypeIds)
   }
 
@@ -229,6 +245,18 @@ export class StepDetailComponent implements OnInit {
       default:
         return base
     }
+  }
+
+  getIssueTypeClasses(issueTypeId: number): string {
+    const isSelected = this.isIssueTypeSelected(issueTypeId)
+    const base =
+      'border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)]'
+
+    if (!isSelected) {
+      return base
+    }
+
+    return `${base} border-[var(--color-primary)] bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)]`
   }
 
   goBack(): void {

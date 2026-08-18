@@ -120,7 +120,24 @@ export class IncidentStore {
   setIssueTypeIds(issueTypeIds: number[]): void {
     this._state.update((s) => ({
       ...s,
-      details: { ...s.details, issueTypeIds: [...new Set(issueTypeIds)] },
+      details: { ...s.details, issueTypeIds },
+    }))
+  }
+
+  addIssueTypeId(issueTypeId: number): void {
+    this._state.update((s) => {
+      if (s.details.issueTypeIds.includes(issueTypeId)) return s
+      return {
+        ...s,
+        details: { ...s.details, issueTypeIds: [...s.details.issueTypeIds, issueTypeId] },
+      }
+    })
+  }
+
+  removeIssueTypeId(issueTypeId: number): void {
+    this._state.update((s) => ({
+      ...s,
+      details: { ...s.details, issueTypeIds: s.details.issueTypeIds.filter(id => id !== issueTypeId) },
     }))
   }
 
@@ -187,12 +204,21 @@ export class IncidentStore {
 
     this._state.update((s) => ({ ...s, isCheckingDuplicates: true }))
     try {
-      const duplicates = await firstValueFrom(
-        this.service.checkDuplicates(location, details.issueTypeIds[0])
-      )
+      // Check duplicates for each issue type
+      const allDuplicates: DuplicateIncident[] = []
+      for (const issueTypeId of details.issueTypeIds) {
+        const duplicates = await firstValueFrom(
+          this.service.checkDuplicates(location, issueTypeId)
+        )
+        allDuplicates.push(...duplicates)
+      }
+      // Remove duplicates by ID and limit
+      const uniqueDuplicates = allDuplicates
+        .filter((d, i, arr) => arr.findIndex(x => x.id === d.id) === i)
+        .slice(0, 10)
       this._state.update((s) => ({
         ...s,
-        duplicateIncidents: duplicates,
+        duplicateIncidents: uniqueDuplicates,
         isCheckingDuplicates: false,
       }))
     } catch {
