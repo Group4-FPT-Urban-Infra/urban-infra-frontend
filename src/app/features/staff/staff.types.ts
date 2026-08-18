@@ -16,6 +16,8 @@ export interface StaffTask {
   assignedAt: string // ISO date string
   slaStatus?: 'On Target' | 'At Risk' | 'Breached'
   dueDate?: string // ISO date string
+  latitude?: number
+  longitude?: number
 }
 
 export interface StaffActivity {
@@ -25,6 +27,14 @@ export interface StaffActivity {
   action: string // e.g., 'resolved', 'assigned', 'commented'
   actorName: string
   createdAt: string // ISO date string
+}
+
+export interface StaffPagedResponse<T> {
+  items: T[]
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
 }
 
 export interface StaffMapIssue {

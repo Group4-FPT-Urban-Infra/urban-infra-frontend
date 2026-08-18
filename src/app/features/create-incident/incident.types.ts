@@ -115,6 +115,7 @@ export interface CreateIncidentState {
 export interface CreateIncidentResult {
   success: boolean
   incidentId?: string
+  reportId?: string
   publicCode?: string
 }
 

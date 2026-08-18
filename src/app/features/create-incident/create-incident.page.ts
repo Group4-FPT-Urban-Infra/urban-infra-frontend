@@ -49,13 +49,7 @@ import { StepReviewComponent } from './step-review.component'
         Cancel
       </button>
       <h1 class="text-base font-semibold text-[var(--color-on-surface)]">Report New Incident</h1>
-      <button
-        type="button"
-        (click)="saveDraft()"
-        class="text-[12px] font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-container)]"
-      >
-        Save Draft
-      </button>
+      <span class="w-14"></span>
     </header>
 
     <!-- Main Content -->
@@ -375,8 +369,4 @@ export class CreateIncidentPage implements OnInit {
     }
   }
 
-  saveDraft(): void {
-    // TODO: Implement draft saving functionality
-    alert('Draft saved! (Feature coming soon)')
-  }
 }

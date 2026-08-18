@@ -29,14 +29,6 @@ import type { IssueDetailResponse, IssueTimelineItemResponse } from '../../core/
             CivicShield
           </div>
         </div>
-        <div class="flex items-center gap-3">
-          <button class="flex items-center justify-center rounded-full p-2 text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50">
-            <span class="material-symbols-outlined">share</span>
-          </button>
-          <button class="flex items-center justify-center rounded-full p-2 text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50">
-            <span class="material-symbols-outlined">more_vert</span>
-          </button>
-        </div>
       </header>
 
       @if (isLoading()) {
@@ -81,7 +73,7 @@ import type { IssueDetailResponse, IssueTimelineItemResponse } from '../../core/
                 (click)="toggleUpvote()"
               >
                 <span class="material-symbols-outlined text-[14px]">thumb_up</span>
-                {{ issue()!.hasUpvoted ? 'Bỏ ủng hộ' : 'Ủng hộ' }} ({{ issue()!.upvoteCount }})
+                {{ issue()!.hasUpvoted ? 'Đã ủng hộ' : 'Chưa ủng hộ' }} ({{ issue()!.upvoteCount }})
               </button>
             </div>
           </div>
@@ -301,50 +293,8 @@ import type { IssueDetailResponse, IssueTimelineItemResponse } from '../../core/
                   </div>
                 }
                 @if (timeline().length === 0) {
-                <!-- Timeline Item: Current -->
-                <div class="relative">
-                  <div
-                    class="absolute -left-[30px] z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--color-surface-container-lowest)] bg-[#FEF3C7]"
-                  >
-                    <span class="material-symbols-outlined text-[12px]">sync</span>
-                  </div>
-                  <div class="flex flex-col">
-                    <span class="text-[12px] font-bold text-[var(--color-on-surface)]">In Progress</span>
-                    <span class="mb-1 text-[11px] text-[var(--color-outline)]">Today, 10:30 AM</span>
-                    <span class="text-[14px] text-[var(--color-on-surface-variant)]">Crew dispatched for initial assessment.</span>
-                  </div>
-                </div>
+                  <p class="text-sm text-[var(--color-on-surface-variant)]">Chưa có lịch sử trạng thái.</p>
                 }
-                <!-- Timeline Item: Past -->
-                <div class="relative">
-                  <div
-                    class="absolute -left-[30px] z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--color-surface-container-lowest)] bg-[var(--color-surface-container-high)]"
-                  >
-                    <span class="material-symbols-outlined text-[12px] text-[var(--color-on-surface-variant)]"
-                      >assignment_turned_in</span
-                    >
-                  </div>
-                  <div class="flex flex-col">
-                    <span class="text-[12px] font-bold text-[var(--color-on-surface)]">Assigned</span>
-                    <span class="mb-1 text-[11px] text-[var(--color-outline)]">{{ formatDate(issue()!.reportedAt) }}</span>
-                    <span class="text-[14px] text-[var(--color-on-surface-variant)]">Assigned to Dept. of Public Works.</span>
-                  </div>
-                </div>
-                <!-- Timeline Item: Past -->
-                <div class="relative">
-                  <div
-                    class="absolute -left-[30px] z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--color-surface-container-lowest)] bg-[var(--color-surface-container-high)]"
-                  >
-                    <span class="material-symbols-outlined text-[12px] text-[var(--color-on-surface-variant)]"
-                      >check_circle</span
-                    >
-                  </div>
-                  <div class="flex flex-col">
-                    <span class="text-[12px] font-bold text-[var(--color-on-surface)]">Report Submitted</span>
-                    <span class="mb-1 text-[11px] text-[var(--color-outline)]">{{ formatDate(issue()!.reportedAt) }}</span>
-                    <span class="text-[14px] text-[var(--color-on-surface-variant)]">Report received via Citizen Portal.</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

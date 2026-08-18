@@ -119,6 +119,49 @@ export interface UpvoteResponse {
   upvoteCount: number
 }
 
+export interface ReportSummaryResponse {
+  id: number
+  publicCode: string
+  title: string
+  area: { id: number; name: string; code: string }
+  latitude: number
+  longitude: number
+  thumbnailUrl?: string
+  upvoteCount: number
+  hasUpvoted: boolean
+  reportedAt: string
+  issueCount: number
+  resolvedIssueCount: number
+  issueTypes: { id: number; name: string; code: string }[]
+}
+
+export interface ReportIssueResponse {
+  id: number
+  publicCode: string
+  issueType: { id: number; name: string; code: string }
+  priority: { id: number; name: string; code: string }
+  status: { id: number; name: string; code: string }
+  currentDepartment?: { id: number; name: string; code: string }
+  reportedAt: string
+  resolvedAt?: string
+}
+
+export interface ReportDetailResponse extends ReportSummaryResponse {
+  description: string
+  addressText?: string
+  reporterDisplayName: string
+  attachments: IssueAttachmentResponse[]
+  issues: ReportIssueResponse[]
+}
+
+export interface ReportUpdateResponse extends IssueTimelineItemResponse {
+  reportId: number
+  reportPublicCode: string
+  reportTitle: string
+  issueId: number
+  issuePublicCode: string
+}
+
 export interface SearchIssuesOptions {
   page?: number
   pageSize?: number
@@ -293,14 +336,34 @@ export class DashboardService {
   /**
    * Get user's submitted issues (for citizen my-reports page)
    */
-  getMyReports(): Observable<IssueSummaryResponse[]> {
+  getMyReports(): Observable<ReportSummaryResponse[]> {
     return this.http
-      .get<ApiResponse<PagedResponse<IssueSummaryResponse>>>(`${this.baseUrl}/issues/mine?pageSize=20`)
+      .get<ApiResponse<PagedResponse<ReportSummaryResponse>>>(`${this.baseUrl}/reports/mine?pageSize=20`)
       .pipe(
         map((response) => {
           return response.data?.items || []
         })
       )
+  }
+
+  getReportById(id: number): Observable<ReportDetailResponse> {
+    return this.http.get<ApiResponse<ReportDetailResponse>>(`${this.baseUrl}/reports/${id}`)
+      .pipe(map((response) => response.data))
+  }
+
+  getMyReportUpdates(limit = 5): Observable<ReportUpdateResponse[]> {
+    return this.http.get<ApiResponse<ReportUpdateResponse[]>>(`${this.baseUrl}/reports/mine/updates?limit=${limit}`)
+      .pipe(map((response) => response.data ?? []))
+  }
+
+  upvoteReport(reportId: number): Observable<UpvoteResponse> {
+    return this.http.post<ApiResponse<UpvoteResponse>>(`${this.baseUrl}/reports/${reportId}/upvote`, {})
+      .pipe(map((response) => response.data))
+  }
+
+  removeReportUpvote(reportId: number): Observable<UpvoteResponse> {
+    return this.http.delete<ApiResponse<UpvoteResponse>>(`${this.baseUrl}/reports/${reportId}/upvote`)
+      .pipe(map((response) => response.data))
   }
 
   /**

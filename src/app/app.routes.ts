@@ -153,10 +153,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/citizen/incident-detail.page').then((m) => m.IncidentDetailComponent),
       },
+      {
+        path: 'my-reports/:id',
+        loadComponent: () =>
+          import('./features/citizen/report-detail.page').then((m) => m.ReportDetailComponent),
+      },
     ],
   },
   {
     path: 'staff',
+    // canActivate: [roleGuard(['Staff'])], // Tạm thời vô hiệu hóa để phát triển UI
     loadComponent: () =>
       import('./shared/layout/staff-layout.component').then((m) => m.StaffLayoutComponent),
     children: [

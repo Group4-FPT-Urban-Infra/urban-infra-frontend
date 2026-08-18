@@ -102,7 +102,7 @@ export class IncidentService {
    * Create a new citizen report (generates one or more Issue records internally)
    * POST /api/reports (multipart/form-data)
    */
-  createIncident(payload: CreateIncidentPayload): Observable<{ id: number; publicCode: string }> {
+  createIncident(payload: CreateIncidentPayload): Observable<{ id: number; publicCode: string; issues?: { id: number }[] }> {
     const formData = new FormData()
 
     // Required fields - send multiple issue type IDs
@@ -128,7 +128,7 @@ export class IncidentService {
       formData.append('Images', photo.file)
     }
 
-    return this.http.post<{ success: boolean; data?: { id: number; publicCode: string }; message?: string }>(
+    return this.http.post<{ success: boolean; data?: { id: number; publicCode: string; issues?: { id: number }[] }; message?: string }>(
       `${this.baseUrl}/reports`,
       formData
     ).pipe(

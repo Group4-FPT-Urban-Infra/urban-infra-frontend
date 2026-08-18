@@ -261,7 +261,8 @@ export class IncidentStore {
       this._state.update((s) => ({ ...s, isSubmitting: false }))
       return {
         success: true,
-        incidentId: String(result.id),
+        incidentId: String(result.issues?.[0]?.id ?? result.id),
+        reportId: String(result.id),
         publicCode: result.publicCode,
       }
     } catch (error) {

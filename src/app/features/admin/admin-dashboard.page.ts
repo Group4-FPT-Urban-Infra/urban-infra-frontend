@@ -1,7 +1,10 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core'
+import { Component, OnInit, computed, inject, signal, effect, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core'
 import { CommonModule, NgStyle } from '@angular/common'
 import { AdminSidebarComponent } from './admin-sidebar.component'
 import { AuthStore } from '../../core/auth/auth.store'
+import * as L from 'leaflet'
+// @ts-ignore
+import 'leaflet.heat'
 import {
   AdminDashboardService,
   AdminKpiResponse,
@@ -123,6 +126,16 @@ interface ReportRow {
         background-size: 800px 100%;
         animation: shimmer 1.4s ease-in-out infinite;
         border-radius: 8px;
+      }
+
+      /* Fix Leaflet map sizing */
+      :host ::ng-deep .leaflet-container {
+        height: 100%;
+        width: 100%;
+      }
+      :host ::ng-deep .leaflet-control-zoom {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
     `,
   ],
@@ -298,65 +311,14 @@ interface ReportRow {
               </div>
 
               <!-- Map area -->
-              <div class="relative flex-1 overflow-hidden" style="background-color: var(--color-surface-container-low)">
-                <!-- Grid lines simulating a map -->
-                <div class="absolute inset-0 opacity-30"
-                  style="background-image: linear-gradient(var(--color-outline-variant) 1px, transparent 1px), linear-gradient(90deg, var(--color-outline-variant) 1px, transparent 1px); background-size: 40px 40px">
-                </div>
-
-                <!-- District blocks (static bg) -->
-                <div class="absolute" style="top:15%; left:10%; width:35%; height:30%; background: rgba(195,198,215,0.3); border-radius:4px; border: 1px solid var(--color-outline-variant)"></div>
-                <div class="absolute" style="top:15%; left:50%; width:40%; height:25%; background: rgba(195,198,215,0.2); border-radius:4px; border: 1px solid var(--color-outline-variant)"></div>
-                <div class="absolute" style="top:50%; left:20%; width:30%; height:35%; background: rgba(195,198,215,0.25); border-radius:4px; border: 1px solid var(--color-outline-variant)"></div>
-                <div class="absolute" style="top:50%; left:55%; width:35%; height:30%; background: rgba(195,198,215,0.15); border-radius:4px; border: 1px solid var(--color-outline-variant)"></div>
-
-                <!-- Heatmap clusters (dynamic) -->
-                @for (cluster of mappedHeatmapClusters(); track cluster.districtId) {
-                  <!-- Blur glow -->
-                  <div class="absolute rounded-full transition-all duration-700"
-                       [class.heatmap-pulse]="cluster.severity === 'CRITICAL'"
-                       [style]="'top:' + cluster.top + '%; left:' + cluster.left + '%; width:' + cluster.glowSize + 'px; height:' + cluster.glowSize + 'px; background:' + cluster.colorRgba + '; filter: blur(' + cluster.blur + 'px)'"></div>
-                  
-                  <!-- Dot -->
-                  <div class="absolute rounded-full border-2 border-white shadow-md transition-all duration-700"
-                       [style]="'top:' + (cluster.top + 4) + '%; left:' + (cluster.left + 4) + '%; width:' + cluster.dotSize + 'px; height:' + cluster.dotSize + 'px; background:' + cluster.colorClass"></div>
-                  
-                  <!-- District Label -->
-                  <div class="absolute text-[10px] font-semibold transition-all duration-700" 
-                       [style]="'top:' + (cluster.top - 6) + '%; left:' + (cluster.left - 24) + '%; color: var(--color-on-surface-variant)'">
-                    {{ cluster.districtName }}
-                  </div>
-
-                  <!-- Count Label -->
-                  <div class="absolute rounded-lg px-2 py-0.5 text-[10px] font-bold text-white transition-all duration-700"
-                       [style]="'top:' + (cluster.top - 6) + '%; left:' + (cluster.left + 2) + '%; background:' + cluster.colorClass">
-                    {{ cluster.severity }} &times;{{ cluster.count }}
-                  </div>
-                }
-
-                <!-- Map Controls -->
-                <div
-                  class="absolute bottom-4 right-4 flex flex-col overflow-hidden rounded-xl border shadow-sm"
-                  style="background-color: var(--color-surface); border-color: var(--color-outline-variant)"
-                >
-                  <button
-                    class="flex h-9 w-9 items-center justify-center transition-colors hover:bg-[var(--color-surface-container)]"
-                    style="color: var(--color-on-surface)"
-                  >
-                    <span class="material-symbols-outlined text-[18px]">add</span>
-                  </button>
-                  <div class="h-px" style="background-color: var(--color-outline-variant)"></div>
-                  <button
-                    class="flex h-9 w-9 items-center justify-center transition-colors hover:bg-[var(--color-surface-container)]"
-                    style="color: var(--color-on-surface)"
-                  >
-                    <span class="material-symbols-outlined text-[18px]">remove</span>
-                  </button>
-                </div>
+              <!-- Map area -->
+              <div class="relative flex-1 overflow-hidden h-[400px] z-0" style="background-color: var(--color-surface-container-low)">
+                <!-- Heatmap Container -->
+                <div #heatmapContainer class="h-full w-full"></div>
 
                 <!-- Legend -->
                 <div
-                  class="absolute bottom-4 left-4 flex flex-col gap-1.5 rounded-xl border p-3 text-xs"
+                  class="absolute bottom-4 left-4 flex flex-col gap-1.5 rounded-xl border p-3 text-xs z-[1000]"
                   style="background-color: var(--color-surface); border-color: var(--color-outline-variant)"
                 >
                   <div class="flex items-center gap-2">
@@ -744,9 +706,13 @@ interface ReportRow {
     </div>
   `,
 })
-export class AdminDashboardPage implements OnInit {
+export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
   protected readonly store = inject(AuthStore)
   private readonly adminDashService = inject(AdminDashboardService)
+
+  @ViewChild('heatmapContainer', { static: false }) heatmapContainer!: ElementRef<HTMLDivElement>
+  private map: L.Map | null = null
+  private heatLayer: any = null
 
   // ── KPI State (Signals) ───────────────────────────────────────────────────
   readonly kpiData    = signal<AdminKpiResponse | null>(null)
@@ -755,6 +721,15 @@ export class AdminDashboardPage implements OnInit {
 
   // Allow use of Math in template
   protected readonly Math = Math
+
+  constructor() {
+    effect(() => {
+      const data = this.heatmapData()
+      if (this.map && data) {
+        this.renderHeatmap(data)
+      }
+    })
+  }
 
   ngOnInit(): void {
     this.loadKpis()
@@ -1233,62 +1208,98 @@ export class AdminDashboardPage implements OnInit {
     })
   }
 
-  readonly mappedHeatmapClusters = computed(() => {
-    const data = this.heatmapData()
-    // Giả lập tọa độ cho các khu vực trên lưới map CSS
-    const coordsPool = [
-      { top: 28, left: 40 },
-      { top: 55, left: 22 },
-      { top: 18, left: 68 },
-      { top: 65, left: 55 },
-      { top: 40, left: 70 },
-      { top: 20, left: 20 },
-      { top: 70, left: 35 },
-      { top: 45, left: 15 },
-    ]
+  ngAfterViewInit() {
+    setTimeout(() => this.initMap(), 100)
+  }
 
-    return data.map((item, index) => {
-      const pos = coordsPool[index % coordsPool.length]
-      let colorClass = ''
-      let colorRgba = ''
-      let glowSize = 56
-      let dotSize = 16
-      let blur = 10
+  ngOnDestroy() {
+    if (this.map) {
+      this.map.remove()
+    }
+  }
 
-      switch (item.severity.toUpperCase()) {
-        case 'CRITICAL':
-          colorClass = 'var(--color-error)'
-          colorRgba = 'rgba(186,26,26,0.35)'
-          glowSize = 56
-          dotSize = 16
-          blur = 10
-          break
-        case 'HIGH':
-          colorClass = 'var(--color-tertiary)'
-          colorRgba = 'rgba(120,75,0,0.25)'
-          glowSize = 64
-          dotSize = 14
-          blur = 12
-          break
-        default:
-          colorClass = 'var(--color-primary)'
-          colorRgba = 'rgba(0,74,198,0.15)'
-          glowSize = 80
-          dotSize = 12
-          blur = 16
-          break
+  private initMap() {
+    if (!this.heatmapContainer?.nativeElement) return
+
+    this.map = L.map(this.heatmapContainer.nativeElement, {
+      center: [20.9599, 107.0448], // Default center around Ha Long
+      zoom: 12,
+      zoomControl: true,
+      attributionControl: false
+    })
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+    }).addTo(this.map)
+
+    if (this.heatmapData().length > 0) {
+      this.renderHeatmap(this.heatmapData())
+    }
+  }
+
+  private renderHeatmap(data: HeatmapDataPoint[]) {
+    if (!this.map) return
+
+    if (this.heatLayer) {
+      this.map.removeLayer(this.heatLayer)
+    }
+
+    const heatPoints: [number, number, number][] = []
+
+    // Map specific districts/cities in Quang Ninh to realistic coordinates
+    const districtCoordsMap: Record<string, {lat: number, lng: number}> = {
+      'HL': { lat: 20.9599, lng: 107.0448 }, // Ha Long
+      'BC': { lat: 20.9582, lng: 107.0142 }, // Bai Chay
+      'CP': { lat: 21.0167, lng: 107.3167 }, // Cam Pha
+      'UB': { lat: 21.0333, lng: 106.7833 }, // Uong Bi
+      'MC': { lat: 21.5333, lng: 107.9667 }, // Mong Cai
+      'DT': { lat: 21.0500, lng: 106.5333 }, // Dong Trieu
+      'QY': { lat: 20.9333, lng: 106.8000 }, // Quang Yen
+      'HG': { lat: 20.9515, lng: 107.0825 }, // Hon Gai
+    }
+    
+    // Default fallback coordinate
+    const defaultCoord = { lat: 20.9599, lng: 107.0448 }
+
+    data.forEach((item) => {
+      // Find coordinate by district ID or name, fallback to default
+      let baseCoord = districtCoordsMap[item.districtId]
+      
+      if (!baseCoord) {
+        // Simple search by name if ID doesn't match
+        if (item.districtName.includes('Hạ Long')) baseCoord = districtCoordsMap['HL']
+        else if (item.districtName.includes('Bãi Cháy')) baseCoord = districtCoordsMap['BC']
+        else if (item.districtName.includes('Cẩm Phả')) baseCoord = districtCoordsMap['CP']
+        else if (item.districtName.includes('Uông Bí')) baseCoord = districtCoordsMap['UB']
+        else if (item.districtName.includes('Móng Cái')) baseCoord = districtCoordsMap['MC']
+        else baseCoord = defaultCoord
       }
+      
+      let intensityMultiplier = 1
+      if (item.severity.toUpperCase() === 'CRITICAL') intensityMultiplier = 3
+      else if (item.severity.toUpperCase() === 'HIGH') intensityMultiplier = 2
 
-      return {
-        ...item,
-        top: pos.top,
-        left: pos.left,
-        colorClass,
-        colorRgba,
-        glowSize,
-        dotSize,
-        blur
+      // Generate random points around the base coordinate to form a cluster
+      for (let i = 0; i < item.count; i++) {
+        // Spread radius depends on the district scale, usually ~0.02 degrees (~2km)
+        const lat = baseCoord.lat + (Math.random() - 0.5) * 0.02
+        const lng = baseCoord.lng + (Math.random() - 0.5) * 0.02
+        // intensity range from 0.1 to 1.0 based on severity
+        heatPoints.push([lat, lng, 0.4 * intensityMultiplier])
       }
     })
-  })
+
+    // Create heat layer with vibrant colors
+    this.heatLayer = (L as any).heatLayer(heatPoints, {
+      radius: 20,
+      blur: 15,
+      maxZoom: 14,
+      max: 1.0,
+      gradient: {
+        0.4: '#004ac6',   // Medium (var(--color-primary))
+        0.7: '#784b00',   // High (var(--color-tertiary))
+        1.0: '#ba1a1a'    // Critical (var(--color-error))
+      }
+    }).addTo(this.map)
+  }
 }
