@@ -18,33 +18,33 @@ import { IncidentStore } from './incident.store'
 
       <!-- Form Layout -->
       <div class="flex flex-col gap-6">
-        <!-- Issue Type Dropdown -->
-        <div class="flex flex-col gap-1">
-          <label
-            class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]"
-            for="issueType"
-          >
-            Incident Type <span class="text-[var(--color-error)]">*</span>
+        <!-- Issue Type Multi-Select (Chips) -->
+        <div class="flex flex-col gap-2">
+          <label class="text-[12px] font-medium leading-4 tracking-wide text-[var(--color-on-surface)]">
+            Incident Types <span class="text-[var(--color-error)]">*</span>
           </label>
-          <div class="relative">
-            <select
-              id="issueType"
-              [(ngModel)]="selectedIssueTypeId"
-              (ngModelChange)="onIssueTypeChange($event)"
-              name="issueType"
-              class="w-full cursor-pointer appearance-none rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] py-[10px] pl-4 pr-10 text-sm text-[var(--color-on-surface)] transition-colors focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-fixed)]"
-            >
-              <option [ngValue]="null" disabled>Select incident type...</option>
-              @for (type of store.issueTypes(); track type.issueTypeId) {
-                <option [value]="type.issueTypeId">{{ type.typeName }}</option>
-              }
-            </select>
-            <span
-              class="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-on-surface-variant)]"
-            >
-              expand_more
-            </span>
+          <div class="flex flex-wrap gap-2">
+            @for (type of store.issueTypes(); track type.issueTypeId) {
+              <button
+                type="button"
+                (click)="onIssueTypeToggle(type.issueTypeId)"
+                class="px-3 py-2 rounded-full border text-[12px] font-medium transition-all"
+                [class]="getIssueTypeClasses(type.issueTypeId)"
+                [title]="type.description || type.typeName"
+              >
+                {{ type.typeName }}
+              </button>
+            }
           </div>
+          @if (selectedIssueTypeIds.length === 0) {
+            <p class="text-xs text-[var(--color-on-surface-variant)]">
+              Select at least one incident type. You can select up to 5 types.
+            </p>
+          } @else {
+            <p class="text-xs text-[var(--color-on-surface-variant)]">
+              {{ selectedIssueTypeIds.length }}/5 incident types selected
+            </p>
+          }
         </div>
 
         <!-- Title Input -->
@@ -154,7 +154,7 @@ export class StepDetailComponent implements OnInit {
 
   protected readonly store = inject(IncidentStore)
 
-  protected selectedIssueTypeId: number | null = null
+  protected selectedIssueTypeIds: number[] = []
   protected selectedPriorityId: number | null = null
   protected title = ''
   protected description = ''
@@ -163,7 +163,7 @@ export class StepDetailComponent implements OnInit {
   ngOnInit(): void {
     // Sync with store
     const details = this.store.details()
-    this.selectedIssueTypeId = details.issueTypeId
+    this.selectedIssueTypeIds = [...details.issueTypeIds]
     this.selectedPriorityId = details.priorityId
     this.title = details.title
     this.description = details.description
@@ -184,15 +184,26 @@ export class StepDetailComponent implements OnInit {
 
   canProceed(): boolean {
     return (
-      this.selectedIssueTypeId !== null &&
+      this.selectedIssueTypeIds.length > 0 &&
       this.title.trim().length >= 5 &&
       this.description.trim().length >= 10
     )
   }
 
-  onIssueTypeChange(issueTypeId: number): void {
-    this.selectedIssueTypeId = issueTypeId
-    this.store.setIssueTypeId(issueTypeId)
+  isIssueTypeSelected(issueTypeId: number): boolean {
+    return this.selectedIssueTypeIds.includes(issueTypeId)
+  }
+
+  onIssueTypeToggle(issueTypeId: number): void {
+    if (this.isIssueTypeSelected(issueTypeId)) {
+      this.selectedIssueTypeIds = this.selectedIssueTypeIds.filter(id => id !== issueTypeId)
+    } else {
+      // Max 5 issue types allowed
+      if (this.selectedIssueTypeIds.length < 5) {
+        this.selectedIssueTypeIds = [...this.selectedIssueTypeIds, issueTypeId]
+      }
+    }
+    this.store.setIssueTypeIds(this.selectedIssueTypeIds)
   }
 
   onPriorityChange(priorityId: number): void {
@@ -234,6 +245,18 @@ export class StepDetailComponent implements OnInit {
       default:
         return base
     }
+  }
+
+  getIssueTypeClasses(issueTypeId: number): string {
+    const isSelected = this.isIssueTypeSelected(issueTypeId)
+    const base =
+      'border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)]'
+
+    if (!isSelected) {
+      return base
+    }
+
+    return `${base} border-[var(--color-primary)] bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)]`
   }
 
   goBack(): void {

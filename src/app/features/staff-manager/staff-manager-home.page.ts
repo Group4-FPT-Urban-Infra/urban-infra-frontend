@@ -148,7 +148,7 @@ import {
                         {{ issue.priorityName }}
                       </span>
                     </td>
-                    <td class="p-4 text-[var(--color-on-surface-variant)]">{{ formatTimeAgo(issue.reportedAt) }}</td>
+                    <td class="p-4 text-[var(--color-on-surface-variant)]">{{ formatDate(issue.reportedAt) }}</td>
                     <td class="p-4">
                       <button (click)="openAssignModal(issue)" class="text-[12px] font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-container)]">
                         Assign
@@ -306,8 +306,8 @@ export class StaffManagerHomeComponent implements OnInit {
     })
   }
 
-  formatTimeAgo(date: string): string {
-    return this.dmService.formatTimeAgo(date)
+  formatDate(date: string): string {
+    return this.dmService.formatDate(date)
   }
 
   getCapacity(member: TeamWorkloadItem): number {

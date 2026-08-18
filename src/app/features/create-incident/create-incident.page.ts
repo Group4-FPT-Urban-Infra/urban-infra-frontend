@@ -362,7 +362,7 @@ export class CreateIncidentPage implements OnInit {
   cancel(): void {
     if (
       this.store.location() ||
-      this.store.details().issueTypeId ||
+      this.store.details().issueTypeIds.length > 0 ||
       this.store.details().title ||
       this.store.details().description
     ) {

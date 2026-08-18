@@ -99,35 +99,37 @@ export class IncidentService {
   }
 
   /**
-   * Create a new incident
-   * POST /api/issues (multipart/form-data)
+   * Create a new citizen report (generates one or more Issue records internally)
+   * POST /api/reports (multipart/form-data)
    */
   createIncident(payload: CreateIncidentPayload): Observable<{ id: number; publicCode: string }> {
     const formData = new FormData()
 
-    // Required fields
-    formData.append('issueTypeId', String(payload.details.issueTypeId))
-    formData.append('areaId', String(payload.details.areaId))
-    formData.append('title', payload.details.title)
-    formData.append('description', payload.details.description)
-    formData.append('latitude', String(payload.location.latitude))
-    formData.append('longitude', String(payload.location.longitude))
+    // Required fields - send multiple issue type IDs
+    for (const issueTypeId of payload.details.issueTypeIds) {
+      formData.append('IssueTypeIds', String(issueTypeId))
+    }
+    formData.append('AreaId', String(payload.details.areaId))
+    formData.append('Title', payload.details.title)
+    formData.append('Description', payload.details.description)
+    formData.append('Latitude', String(payload.location.latitude))
+    formData.append('Longitude', String(payload.location.longitude))
 
     // Optional fields
     if (payload.location.address) {
-      formData.append('addressText', payload.location.address)
+      formData.append('AddressText', payload.location.address)
     }
     if (payload.details.priorityId) {
-      formData.append('priorityId', String(payload.details.priorityId))
+      formData.append('PriorityId', String(payload.details.priorityId))
     }
 
     // Photos
     for (const photo of payload.photos) {
-      formData.append('images', photo.file)
+      formData.append('Images', photo.file)
     }
 
     return this.http.post<{ success: boolean; data?: { id: number; publicCode: string }; message?: string }>(
-      `${this.baseUrl}/issues`,
+      `${this.baseUrl}/reports`,
       formData
     ).pipe(
       map((response) => {

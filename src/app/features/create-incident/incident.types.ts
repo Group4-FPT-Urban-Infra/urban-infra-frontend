@@ -70,7 +70,7 @@ export interface LocationData {
 
 export interface IncidentDetails {
   areaId: number | null
-  issueTypeId: number | null
+  issueTypeIds: number[]
   priorityId: number | null
   title: string
   description: string

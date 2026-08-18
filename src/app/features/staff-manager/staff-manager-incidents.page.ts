@@ -119,7 +119,7 @@ import { DepartmentManagerIssueSummary, TeamWorkloadItem } from '../../core/serv
                     </span>
                   </td>
                   <td class="hidden p-4 text-[14px] text-[var(--color-on-surface-variant)] lg:table-cell">
-                    {{ formatTimeAgo(issue.reportedAt) }}
+                    {{ formatDate(issue.reportedAt) }}
                   </td>
                   <td class="p-4 text-right">
                     <div class="flex justify-end gap-1">
@@ -340,8 +340,8 @@ export class StaffManagerIncidentsComponent implements OnInit {
     })
   }
 
-  formatTimeAgo(date: string): string {
-    return this.dmService.formatTimeAgo(date)
+  formatDate(date: string): string {
+    return this.dmService.formatDate(date)
   }
 
   formatSlaStatus(status?: string): string {

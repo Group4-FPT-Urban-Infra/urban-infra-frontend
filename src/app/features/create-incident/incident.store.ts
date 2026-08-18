@@ -19,7 +19,7 @@ const INITIAL_STATE: CreateIncidentState = {
   location: null,
   details: {
     areaId: null,
-    issueTypeId: null,
+    issueTypeIds: [],
     priorityId: null,
     title: '',
     description: '',
@@ -71,7 +71,7 @@ export class IncidentStore {
   readonly canProceedFromDetails = computed(() => {
     const d = this._state().details
     return (
-      d.issueTypeId !== null &&
+      d.issueTypeIds.length > 0 &&
       d.title.trim().length >= 5 &&
       d.description.trim().length >= 10
     )
@@ -117,10 +117,27 @@ export class IncidentStore {
     }))
   }
 
-  setIssueTypeId(issueTypeId: number | null): void {
+  setIssueTypeIds(issueTypeIds: number[]): void {
     this._state.update((s) => ({
       ...s,
-      details: { ...s.details, issueTypeId },
+      details: { ...s.details, issueTypeIds },
+    }))
+  }
+
+  addIssueTypeId(issueTypeId: number): void {
+    this._state.update((s) => {
+      if (s.details.issueTypeIds.includes(issueTypeId)) return s
+      return {
+        ...s,
+        details: { ...s.details, issueTypeIds: [...s.details.issueTypeIds, issueTypeId] },
+      }
+    })
+  }
+
+  removeIssueTypeId(issueTypeId: number): void {
+    this._state.update((s) => ({
+      ...s,
+      details: { ...s.details, issueTypeIds: s.details.issueTypeIds.filter(id => id !== issueTypeId) },
     }))
   }
 
@@ -183,16 +200,25 @@ export class IncidentStore {
   // --- Duplicate Check Actions ---
   async checkDuplicates(): Promise<void> {
     const { location, details } = this._state()
-    if (!location || !details.issueTypeId) return
+    if (!location || details.issueTypeIds.length === 0) return
 
     this._state.update((s) => ({ ...s, isCheckingDuplicates: true }))
     try {
-      const duplicates = await firstValueFrom(
-        this.service.checkDuplicates(location, details.issueTypeId)
-      )
+      // Check duplicates for each issue type
+      const allDuplicates: DuplicateIncident[] = []
+      for (const issueTypeId of details.issueTypeIds) {
+        const duplicates = await firstValueFrom(
+          this.service.checkDuplicates(location, issueTypeId)
+        )
+        allDuplicates.push(...duplicates)
+      }
+      // Remove duplicates by ID and limit
+      const uniqueDuplicates = allDuplicates
+        .filter((d, i, arr) => arr.findIndex(x => x.id === d.id) === i)
+        .slice(0, 10)
       this._state.update((s) => ({
         ...s,
-        duplicateIncidents: duplicates,
+        duplicateIncidents: uniqueDuplicates,
         isCheckingDuplicates: false,
       }))
     } catch {

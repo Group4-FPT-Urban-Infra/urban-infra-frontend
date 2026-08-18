@@ -94,11 +94,11 @@ import { IncidentStore } from './incident.store'
 
             <!-- Tags -->
             <div class="mt-2 flex flex-wrap gap-2">
-              @if (getIssueTypeName()) {
+              @for (issueTypeId of store.details().issueTypeIds; track issueTypeId) {
                 <span
                   class="inline-flex items-center rounded-full bg-[var(--color-primary-container)] px-3 py-1 text-[12px] font-medium text-[var(--color-on-primary-container)]"
                 >
-                  {{ getIssueTypeName() }}
+                  {{ getIssueTypeName(issueTypeId) }}
                 </span>
               }
               @if (getPriorityName()) {
@@ -215,9 +215,7 @@ export class StepReviewComponent {
     return area?.areaName || ''
   }
 
-  getIssueTypeName(): string {
-    const issueTypeId = this.store.details().issueTypeId
-    if (!issueTypeId) return ''
+  getIssueTypeName(issueTypeId: number): string {
     const issueType = this.store.issueTypes().find((t) => t.issueTypeId === issueTypeId)
     return issueType?.typeName || ''
   }

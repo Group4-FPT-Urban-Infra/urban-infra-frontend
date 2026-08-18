@@ -280,7 +280,7 @@ const DEFAULT_ISSUE_TYPE_COLORS: Record<string, string> = {
               <div class="flex items-center gap-4 text-sm text-[var(--color-on-surface-variant)]">
                 <span class="flex items-center gap-1">
                   <span class="material-symbols-outlined text-[16px]">schedule</span>
-                  {{ formatTimeAgo(selectedIssue()!.reportedAt) }}
+                  {{ formatDate(selectedIssue()!.reportedAt) }}
                 </span>
               </div>
 
@@ -636,7 +636,7 @@ export class DepartmentManagerMapComponent implements AfterViewInit, OnDestroy, 
     }
   }
 
-  formatTimeAgo(date: string): string {
+  formatDate(date: string): string {
     const d = new Date(date)
     const now = new Date()
     const diffMs = now.getTime() - d.getTime()
