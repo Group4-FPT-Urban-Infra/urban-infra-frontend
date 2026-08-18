@@ -46,6 +46,8 @@ export interface DepartmentManagerIssueSummary {
   thumbnailUrl?: string
   latitude: number
   longitude: number
+  issueStatus: string
+  assignedMemberCount: number
 }
 
 export interface CurrentAssignmentInfo {
@@ -108,6 +110,14 @@ export interface DepartmentManagerIssueListRequest {
   keyword?: string
   pageNumber?: number
   pageSize?: number
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  totalCount: number
+  pageNumber: number
+  pageSize: number
+  totalPages: number
 }
 
 export interface AssignIssueRequest {
@@ -214,7 +224,7 @@ export class DepartmentManagerService {
   }
 
   // Issues
-  getIssues(request: DepartmentManagerIssueListRequest = {}): Observable<DepartmentManagerIssueSummary[]> {
+  getIssues(request: DepartmentManagerIssueListRequest = {}): Observable<PaginatedResponse<DepartmentManagerIssueSummary>> {
     const body = {
       pageNumber: request.pageNumber ?? 1,
       pageSize: request.pageSize ?? 20,
@@ -226,8 +236,8 @@ export class DepartmentManagerService {
     }
 
     return this.http
-      .post<ApiResponse<DepartmentManagerIssueSummary[]>>(`${this.baseUrl}/department-manager/issues/filter`, body)
-      .pipe(map((r) => r.data ?? []))
+      .post<ApiResponse<PaginatedResponse<DepartmentManagerIssueSummary>>>(`${this.baseUrl}/department-manager/issues/filter`, body)
+      .pipe(map((r) => r.data ?? { items: [], totalCount: 0, pageNumber: 1, pageSize: 20, totalPages: 0 }))
   }
 
   getIssueDetail(issueId: number): Observable<DepartmentManagerIssueDetail> {

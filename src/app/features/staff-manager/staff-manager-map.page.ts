@@ -556,9 +556,9 @@ export class DepartmentManagerMapComponent implements AfterViewInit, OnDestroy, 
 
     this.dmService.getIssues(request).subscribe({
       next: (data) => {
-        this.issues.set(data)
-        this.filteredIssues.set(data)
-        this.updateMapMarkers(data)
+        this.issues.set(data.items)
+        this.filteredIssues.set(data.items)
+        this.updateMapMarkers(data.items)
         this.isLoading.set(false)
       },
       error: (err) => {
