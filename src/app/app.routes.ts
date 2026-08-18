@@ -153,6 +153,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/citizen/incident-detail.page').then((m) => m.IncidentDetailComponent),
       },
+      {
+        path: 'my-reports/:id',
+        loadComponent: () =>
+          import('./features/citizen/report-detail.page').then((m) => m.ReportDetailComponent),
+      },
     ],
   },
   {

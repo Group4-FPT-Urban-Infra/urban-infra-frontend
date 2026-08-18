@@ -19,7 +19,7 @@ const INITIAL_STATE: CreateIncidentState = {
   location: null,
   details: {
     areaId: null,
-    issueTypeId: null,
+    issueTypeIds: [],
     priorityId: null,
     title: '',
     description: '',
@@ -71,7 +71,7 @@ export class IncidentStore {
   readonly canProceedFromDetails = computed(() => {
     const d = this._state().details
     return (
-      d.issueTypeId !== null &&
+      d.issueTypeIds.length > 0 &&
       d.title.trim().length >= 5 &&
       d.description.trim().length >= 10
     )
@@ -117,10 +117,10 @@ export class IncidentStore {
     }))
   }
 
-  setIssueTypeId(issueTypeId: number | null): void {
+  setIssueTypeIds(issueTypeIds: number[]): void {
     this._state.update((s) => ({
       ...s,
-      details: { ...s.details, issueTypeId },
+      details: { ...s.details, issueTypeIds: [...new Set(issueTypeIds)] },
     }))
   }
 
@@ -183,12 +183,12 @@ export class IncidentStore {
   // --- Duplicate Check Actions ---
   async checkDuplicates(): Promise<void> {
     const { location, details } = this._state()
-    if (!location || !details.issueTypeId) return
+    if (!location || details.issueTypeIds.length === 0) return
 
     this._state.update((s) => ({ ...s, isCheckingDuplicates: true }))
     try {
       const duplicates = await firstValueFrom(
-        this.service.checkDuplicates(location, details.issueTypeId)
+        this.service.checkDuplicates(location, details.issueTypeIds[0])
       )
       this._state.update((s) => ({
         ...s,
@@ -235,7 +235,8 @@ export class IncidentStore {
       this._state.update((s) => ({ ...s, isSubmitting: false }))
       return {
         success: true,
-        incidentId: String(result.id),
+        incidentId: String(result.issues?.[0]?.id ?? result.id),
+        reportId: String(result.id),
         publicCode: result.publicCode,
       }
     } catch (error) {

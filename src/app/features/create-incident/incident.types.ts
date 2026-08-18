@@ -70,7 +70,7 @@ export interface LocationData {
 
 export interface IncidentDetails {
   areaId: number | null
-  issueTypeId: number | null
+  issueTypeIds: number[]
   priorityId: number | null
   title: string
   description: string
@@ -115,6 +115,7 @@ export interface CreateIncidentState {
 export interface CreateIncidentResult {
   success: boolean
   incidentId?: string
+  reportId?: string
   publicCode?: string
 }
 

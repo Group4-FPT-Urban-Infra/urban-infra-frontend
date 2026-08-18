@@ -102,11 +102,11 @@ export class IncidentService {
    * Create a new incident
    * POST /api/issues (multipart/form-data)
    */
-  createIncident(payload: CreateIncidentPayload): Observable<{ id: number; publicCode: string }> {
+  createIncident(payload: CreateIncidentPayload): Observable<{ id: number; publicCode: string; issues?: { id: number }[] }> {
     const formData = new FormData()
 
     // Required fields
-    formData.append('issueTypeId', String(payload.details.issueTypeId))
+    payload.details.issueTypeIds.forEach((id) => formData.append('issueTypeIds', String(id)))
     formData.append('areaId', String(payload.details.areaId))
     formData.append('title', payload.details.title)
     formData.append('description', payload.details.description)
@@ -126,8 +126,8 @@ export class IncidentService {
       formData.append('images', photo.file)
     }
 
-    return this.http.post<{ success: boolean; data?: { id: number; publicCode: string }; message?: string }>(
-      `${this.baseUrl}/issues`,
+    return this.http.post<{ success: boolean; data?: { id: number; publicCode: string; issues?: { id: number }[] }; message?: string }>(
+      `${this.baseUrl}/reports`,
       formData
     ).pipe(
       map((response) => {

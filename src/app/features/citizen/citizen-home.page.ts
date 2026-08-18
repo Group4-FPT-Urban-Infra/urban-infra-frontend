@@ -3,9 +3,13 @@ import { CommonModule } from '@angular/common'
 import { Router, RouterLink } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
 import { DashboardService } from '../../core/services/dashboard.service'
-import type { IssueSummaryResponse } from '../../core/services/dashboard.service'
-import type { IssueTimelineItemResponse } from '../../core/services/dashboard.service'
+import type { ReportSummaryResponse, ReportUpdateResponse, IssueTimelineItemResponse } from '../../core/services/dashboard.service'
 import { forkJoin } from 'rxjs'
+
+interface NeighborhoodUpdate extends IssueTimelineItemResponse {
+  issueTitle: string
+  issueId: number
+}
 
 @Component({
   selector: 'app-citizen-home',
@@ -25,10 +29,6 @@ import { forkJoin } from 'rxjs'
         </div>
         <!-- Desktop Top Actions -->
         <div class="hidden items-center gap-4 text-[var(--color-on-surface-variant)] md:flex">
-          <button class="relative rounded-full p-2 transition-colors hover:bg-[var(--color-surface-variant)]/50">
-            <span class="material-symbols-outlined">notifications</span>
-            <span class="absolute top-1 right-1 h-2 w-2 rounded-full bg-[var(--color-error)]"></span>
-          </button>
           @if (authStore.isAuthenticated()) {
             <div class="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-outline-variant)] bg-[var(--color-primary-fixed)] text-xs font-bold text-[var(--color-primary)]">
               {{ getUserInitials() }}
@@ -187,11 +187,8 @@ import { forkJoin } from 'rxjs'
                     <!-- Info -->
                     <div class="min-w-0 flex-1">
                       <div class="mb-1 flex items-center gap-2">
-                        <span
-                          class="rounded-full px-2 py-0.5 text-[11px] font-medium"
-                          [class]="getStatusBadgeClass(report.status.code)"
-                        >
-                          {{ report.status.name }}
+                        <span class="rounded-full bg-[var(--color-primary-fixed)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-primary)]">
+                          {{ report.resolvedIssueCount }}/{{ report.issueCount }} issues resolved
                         </span>
                         <span class="text-[11px] text-[var(--color-on-surface-variant)]"
                           >• #{{ report.publicCode }}</span
@@ -201,7 +198,7 @@ import { forkJoin } from 'rxjs'
                         {{ report.title }}
                       </h4>
                       <p class="mt-1 truncate text-[14px] text-[var(--color-on-surface-variant)]">
-                        {{ report.issueType.name }} • {{ formatTimeAgo(report.reportedAt) }}
+                        {{ issueTypeNames(report) }} • {{ formatTimeAgo(report.reportedAt) }}
                       </p>
                     </div>
 
@@ -235,7 +232,7 @@ import { forkJoin } from 'rxjs'
                   <div class="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[var(--color-primary-container)]"></div>
                   <div>
                     <p class="text-[12px] font-medium text-[var(--color-on-surface)]">
-                      {{ update.note || update.toStatus?.name || update.updateType }}
+                      <span class="font-bold">#{{ update.reportPublicCode }}</span> — {{ update.note || update.toStatus?.name || update.updateType }}
                     </p>
                     <span class="text-[11px] text-[var(--color-on-surface-variant)]">{{ formatTimeAgo(update.createdAt) }}</span>
                   </div>
@@ -255,55 +252,19 @@ import { forkJoin } from 'rxjs'
               <!-- Activity Line -->
               <div class="absolute left-4 top-2 bottom-2 w-px bg-[var(--color-surface-container)]"></div>
               <div class="flex flex-col gap-6">
-                <!-- Activity Item 1 -->
-                <div class="relative flex items-start gap-4">
-                  <div
-                    class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-surface-container-lowest)] bg-[var(--color-secondary-fixed)]/20"
-                  >
-                    <span class="material-symbols-outlined text-[14px] text-[var(--color-secondary)]">park</span>
-                  </div>
-                  <div class="pt-1">
-                    <p class="text-[14px] text-[var(--color-on-surface-variant)]">
-                      <span class="font-medium text-[var(--color-on-surface)]">Graffiti removal</span> completed
-                      in Centennial Park.
-                    </p>
-                    <span class="mt-1 block text-[11px] text-[var(--color-outline)]">1 hr ago</span>
-                  </div>
-                </div>
-                <!-- Activity Item 2 -->
-                <div class="relative flex items-start gap-4">
-                  <div
-                    class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-surface-container-lowest)] bg-[var(--color-surface-variant)]"
-                  >
-                    <span class="material-symbols-outlined text-[14px] text-[var(--color-on-surface-variant)]"
-                      >water_drop</span
-                    >
-                  </div>
-                  <div class="pt-1">
-                    <p class="text-[14px] text-[var(--color-on-surface-variant)]">
-                      <span class="font-medium text-[var(--color-on-surface)]">Water main repair</span> scheduled
-                      for North District.
-                    </p>
-                    <span class="mt-1 block text-[11px] text-[var(--color-outline)]">4 hrs ago</span>
-                  </div>
-                </div>
-                <!-- Activity Item 3 -->
-                <div class="relative flex items-start gap-4">
-                  <div
-                    class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-surface-container-lowest)] bg-[var(--color-tertiary-fixed)]/30"
-                  >
-                    <span class="material-symbols-outlined text-[14px] text-[var(--color-tertiary)]"
-                      >construction</span
-                    >
-                  </div>
-                  <div class="pt-1">
-                    <p class="text-[14px] text-[var(--color-on-surface-variant)]">
-                      <span class="font-medium text-[var(--color-on-surface)]">Pothole patched</span> on Elm St
-                      following 3 reports.
-                    </p>
-                    <span class="mt-1 block text-[11px] text-[var(--color-outline)]">Yesterday</span>
-                  </div>
-                </div>
+                @for (activity of neighborhoodUpdates(); track activity.issueId + '-' + activity.id) {
+                  <a [routerLink]="['/citizen/reports', activity.issueId]" class="relative flex items-start gap-4">
+                    <div class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-surface-container-lowest)] bg-[var(--color-secondary-fixed)]/20">
+                      <span class="material-symbols-outlined text-[14px] text-[var(--color-secondary)]">history</span>
+                    </div>
+                    <div class="pt-1">
+                      <p class="text-[14px] text-[var(--color-on-surface-variant)]"><span class="font-medium text-[var(--color-on-surface)]">{{ activity.issueTitle }}</span> — {{ activity.note || activity.toStatus?.name || activity.updateType }}</p>
+                      <span class="mt-1 block text-[11px] text-[var(--color-outline)]">{{ formatTimeAgo(activity.createdAt) }}</span>
+                    </div>
+                  </a>
+                } @empty {
+                  <p class="pl-10 text-sm text-[var(--color-on-surface-variant)]">Chưa có cập nhật sự cố lân cận.</p>
+                }
               </div>
             </div>
           </section>
@@ -325,12 +286,14 @@ export class CitizenHomeComponent implements OnInit {
   private readonly router = inject(Router)
 
   myStats = signal({ totalReports: 0, resolved: 0, helpfulnessScore: 0 })
-  myReports = signal<IssueSummaryResponse[]>([])
-  recentUpdates = signal<IssueTimelineItemResponse[]>([])
+  myReports = signal<ReportSummaryResponse[]>([])
+  recentUpdates = signal<ReportUpdateResponse[]>([])
+  neighborhoodUpdates = signal<NeighborhoodUpdate[]>([])
   isLoadingMyReports = signal(false)
 
   ngOnInit(): void {
     this.loadMyData()
+    this.loadNeighborhoodActivity()
   }
 
   userName(): string {
@@ -354,17 +317,12 @@ export class CitizenHomeComponent implements OnInit {
       this.dashboardService.getMyReports().subscribe({
         next: (reports) => {
           this.myReports.set(reports)
-          const resolved = reports.filter((item) => ['RESOLVED', 'CLOSED'].includes(item.status.code.toUpperCase())).length
+          const resolved = reports.filter((item) => item.issueCount > 0 && item.resolvedIssueCount === item.issueCount).length
           const helpfulnessScore = Math.min(100, reports.reduce((sum, item) => sum + item.upvoteCount, 0))
           this.myStats.set({ totalReports: reports.length, resolved, helpfulnessScore })
-          const timelineRequests = reports.slice(0, 5).map((item) => this.dashboardService.getTimeline(item.id))
-          if (timelineRequests.length) {
-            forkJoin(timelineRequests).subscribe({
-              next: (groups) => this.recentUpdates.set(groups.flat()
-                .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 5)),
-              error: () => this.recentUpdates.set([]),
-            })
-          }
+          this.dashboardService.getMyReportUpdates(5).subscribe({
+            next: (updates) => this.recentUpdates.set(updates), error: () => this.recentUpdates.set([]),
+          })
           this.isLoadingMyReports.set(false)
         },
         error: () => {
@@ -384,22 +342,27 @@ export class CitizenHomeComponent implements OnInit {
   }
 
   viewReportDetail(id: number): void {
-    void this.router.navigate(['/citizen/reports', id])
+    void this.router.navigate(['/citizen/my-reports', id])
   }
 
-  getStatusBadgeClass(statusCode: string): string {
-    const code = statusCode?.toUpperCase() || ''
+  issueTypeNames(report: ReportSummaryResponse): string {
+    return report.issueTypes.map((type) => type.name).join(', ')
+  }
 
-    if (code === 'NEW' || code === 'ASSIGNED' || code === 'IN_PROGRESS' || code === 'PENDING_INFO') {
-      return 'bg-[var(--color-error-container)] text-[var(--color-on-error-container)]'
-    }
-    if (code === 'RESOLVED' || code === 'CLOSED') {
-      return 'bg-[var(--color-secondary-fixed)]/20 text-[var(--color-secondary)]'
-    }
-    if (code === 'REJECTED') {
-      return 'bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)]'
-    }
-
-    return 'bg-[var(--color-tertiary-fixed)] text-[var(--color-on-tertiary-fixed)]'
+  private loadNeighborhoodActivity(): void {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      this.dashboardService.getNearbyIssues(coords.latitude, coords.longitude, 20000, { limit: 10 }).subscribe({
+        next: (issues) => {
+          if (!issues.length) return
+          forkJoin(issues.map((issue) => this.dashboardService.getTimeline(issue.id))).subscribe({
+            next: (groups) => this.neighborhoodUpdates.set(groups.flatMap((updates, index) =>
+              updates.map((update) => ({ ...update, issueId: issues[index].id, issueTitle: issues[index].title })))
+              .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 5)),
+            error: () => this.neighborhoodUpdates.set([]),
+          })
+        },
+      })
+    })
   }
 }
