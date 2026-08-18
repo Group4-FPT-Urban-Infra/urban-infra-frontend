@@ -6,6 +6,7 @@ import {
   StaffTask,
   StaffActivity,
   StaffIncident,
+  StaffPagedResponse,
   StaffIncidentDetail,
   StaffApiFilters,
 } from './staff.types'
@@ -15,6 +16,12 @@ interface StaffState {
   myTasks: StaffTask[]
   recentActivities: StaffActivity[]
   incidents: StaffIncident[]
+  pagination: {
+    page: number
+    pageSize: number
+    totalItems: number
+    totalPages: number
+  }
   selectedIncident: StaffIncidentDetail | null
   loading: {
     dashboard: boolean
@@ -30,6 +37,12 @@ const initialState: StaffState = {
   myTasks: [],
   recentActivities: [],
   incidents: [],
+  pagination: {
+    page: 1,
+    pageSize: 10,
+    totalItems: 0,
+    totalPages: 1,
+  },
   selectedIncident: null,
   loading: {
     dashboard: false,
@@ -50,6 +63,7 @@ export class StaffStore {
   readonly myTasks = computed(() => this.state().myTasks)
   readonly recentActivities = computed(() => this.state().recentActivities)
   readonly incidents = computed(() => this.state().incidents)
+  readonly pagination = computed(() => this.state().pagination)
   readonly selectedIncident = computed(() => this.state().selectedIncident)
   readonly loading = computed(() => this.state().loading)
   readonly error = computed(() => this.state().error)
@@ -84,11 +98,26 @@ export class StaffStore {
   loadIncidents(filters?: StaffApiFilters) {
     this.state.update((s) => ({ ...s, loading: { ...s.loading, incidents: true }, error: null }))
     this.staffService.getStaffIncidents(filters).subscribe({
-      next: (incidents) => {
-        this.state.update((s) => ({ ...s, incidents, loading: { ...s.loading, incidents: false } }))
+      next: (response) => {
+        this.state.update((s) => ({
+          ...s,
+          incidents: response.items,
+          pagination: {
+            page: response.page,
+            pageSize: response.pageSize,
+            totalItems: response.totalItems,
+            totalPages: response.totalPages,
+          },
+          loading: { ...s.loading, incidents: false },
+        }))
       },
       error: () => {
-        this.state.update((s) => ({ ...s, error: 'Failed to load incidents.', loading: { ...s.loading, incidents: false } }))
+        this.state.update((s) => ({
+          ...s,
+          error: 'Failed to load incidents.',
+          incidents: [],
+          loading: { ...s.loading, incidents: false },
+        }))
       },
     })
   }

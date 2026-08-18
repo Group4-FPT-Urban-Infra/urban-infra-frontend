@@ -369,6 +369,7 @@ export class StaffMapComponent implements OnInit, AfterViewInit, OnDestroy {
   // Map & Markers
   private map!: L.Map
   private issueMarkers: L.Marker[] = []
+  private userLocationMarker: L.Marker | null = null
   private userLocation = { lat: 10.7769, lng: 106.7009 }
 
   // State Signals
@@ -463,13 +464,30 @@ export class StaffMapComponent implements OnInit, AfterViewInit, OnDestroy {
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        this.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        this.map.setView([this.userLocation.lat, this.userLocation.lng], 14)
-        this.loadIssues()
+        this.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const userLatLng: L.LatLngTuple = [this.userLocation.lat, this.userLocation.lng];
+        this.map.setView(userLatLng, 14);
+
+        // Add or update the user's location marker
+        if (this.userLocationMarker) {
+          this.userLocationMarker.setLatLng(userLatLng);
+        } else {
+          this.userLocationMarker = L.marker(userLatLng, {
+            icon: L.divIcon({
+              className: 'h-4 w-4 rounded-full border-2 border-white bg-blue-500 shadow-lg',
+              html: '',
+            }),
+          }).addTo(this.map).bindPopup('Vị trí hiện tại của bạn');
+        }
+
+        this.loadIssues();
       },
-      () => this.loadIssues(),
-      { timeout: 5000 }
-    )
+      () => {
+        console.warn('Could not get user location for staff map.');
+        this.loadIssues(); // Load issues even if location fails
+      },
+      { timeout: 5000, enableHighAccuracy: true }
+    );
   }
 
   loadIssues(): void {
