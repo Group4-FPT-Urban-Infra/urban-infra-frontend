@@ -76,7 +76,7 @@ import { NearbyIssueResponse } from '../../core/services/dashboard.service'
             </button>
             <button
               id="viewMapBtn"
-              (click)="scrollToMap()"
+              (click)="navigateToMap()"
               class="flex items-center justify-center gap-2 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-6 py-4 text-sm font-semibold text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container)]"
             >
               <span class="material-symbols-outlined text-[20px]" aria-hidden="true">map</span>
@@ -191,9 +191,21 @@ import { NearbyIssueResponse } from '../../core/services/dashboard.service'
                 >
                 Nearby Incidents
               </h3>
-              <span class="text-sm text-[var(--color-on-surface-variant)]">
-                {{ store.nearbyIssues().length }} found
-              </span>
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-[var(--color-on-surface-variant)]">
+                  {{ store.nearbyIssues().length }} found
+                </span>
+                <button
+                  id="expandMapBtn"
+                  (click)="navigateToMap()"
+                  title="Mở rộng bản đồ (Map View)"
+                  class="flex items-center gap-1.5 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-container)]/20"
+                  type="button"
+                >
+                  <span class="material-symbols-outlined text-[16px]">open_in_full</span>
+                  <span>Mở rộng</span>
+                </button>
+              </div>
             </div>
 
             <!-- Map container -->
@@ -328,6 +340,7 @@ import { NearbyIssueResponse } from '../../core/services/dashboard.service'
             >
               <button
                 id="viewAllIncidentsBtn"
+                (click)="navigateToIncidents()"
                 class="w-full rounded py-2 text-sm font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-container)]/10"
                 type="button"
               >
@@ -832,6 +845,14 @@ export class HomePage implements OnInit, OnDestroy {
 
   navigateToCreateIncident(): void {
     void this.router.navigate(['/incident-reporting'])
+  }
+
+  navigateToMap(): void {
+    void this.router.navigate(['/map'])
+  }
+
+  navigateToIncidents(): void {
+    void this.router.navigate(['/incidents'])
   }
 
   protected getStatusClass(statusCode: string): string {
