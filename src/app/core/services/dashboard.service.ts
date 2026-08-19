@@ -168,6 +168,8 @@ export interface SearchIssuesOptions {
   keyword?: string
   issueTypeId?: number
   statusCodes?: string[]
+  createdByMe?: boolean
+  upvotedByMe?: boolean
 }
 
 @Injectable({ providedIn: 'root' })
@@ -227,11 +229,25 @@ export class DashboardService {
 
     if (options.keyword?.trim()) params = params.set('keyword', options.keyword.trim())
     if (options.issueTypeId) params = params.set('issueTypeId', String(options.issueTypeId))
+    if (options.createdByMe) params = params.set('createdByMe', 'true')
+    if (options.upvotedByMe) params = params.set('upvotedByMe', 'true')
     options.statusCodes?.forEach((code) => (params = params.append('statusCodes', code)))
 
     return this.http
       .get<ApiResponse<PagedResponse<IssueSummaryResponse>>>(`${this.baseUrl}/issues`, { params })
       .pipe(map((response) => response.data))
+  }
+
+  requestReopen(issueId: number, formData: FormData): Observable<IssueDetailResponse> {
+    return this.http
+      .post<ApiResponse<IssueDetailResponse>>(`${this.baseUrl}/issues/${issueId}/request-reopen`, formData)
+      .pipe(map((response) => response.data!))
+  }
+
+  reviewReopen(issueId: number, approved: boolean, note?: string): Observable<IssueDetailResponse> {
+    return this.http
+      .post<ApiResponse<IssueDetailResponse>>(`${this.baseUrl}/issues/${issueId}/review-reopen`, { approved, note })
+      .pipe(map((response) => response.data!))
   }
 
   getTimeline(issueId: number): Observable<IssueTimelineItemResponse[]> {

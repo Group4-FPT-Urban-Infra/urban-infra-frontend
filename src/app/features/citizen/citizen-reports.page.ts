@@ -49,6 +49,52 @@ import type { IssueSummaryResponse, PagedResponse, IssueTypeLookup, IssueStatusL
             </button>
           </div>
 
+          <!-- Scope Filter -->
+          <div class="flex flex-col gap-2 pt-4 border-b border-[var(--color-outline-variant)] pb-4">
+            <h4 class="text-[12px] font-medium uppercase tracking-wider text-[var(--color-on-surface-variant)]">
+              Phạm vi
+            </h4>
+            <label class="group flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="scopeFilter"
+                value="ALL"
+                [checked]="scopeFilter() === 'ALL'"
+                (change)="onScopeChange('ALL')"
+                class="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+              />
+              <span class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors">
+                Tất cả sự cố
+              </span>
+            </label>
+            <label class="group flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="scopeFilter"
+                value="CREATED_BY_ME"
+                [checked]="scopeFilter() === 'CREATED_BY_ME'"
+                (change)="onScopeChange('CREATED_BY_ME')"
+                class="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+              />
+              <span class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors">
+                Sự cố do tôi tạo
+              </span>
+            </label>
+            <label class="group flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="scopeFilter"
+                value="UPVOTED_BY_ME"
+                [checked]="scopeFilter() === 'UPVOTED_BY_ME'"
+                (change)="onScopeChange('UPVOTED_BY_ME')"
+                class="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+              />
+              <span class="text-[14px] text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors">
+                Sự cố tôi đã upvote
+              </span>
+            </label>
+          </div>
+
           <!-- Status Filter -->
           <div class="flex flex-col gap-2 pt-4">
             <h4
@@ -251,6 +297,7 @@ export class CitizenReportsComponent implements OnInit {
   searchQuery = ''
 
   // Filter data from API
+  scopeFilter = signal<'ALL' | 'CREATED_BY_ME' | 'UPVOTED_BY_ME'>('ALL')
   issueStatuses = signal<IssueStatusLookup[]>([])
   issueTypes = signal<IssueTypeLookup[]>([])
   selectedStatusIds = signal<number[]>([])
@@ -259,6 +306,11 @@ export class CitizenReportsComponent implements OnInit {
   ngOnInit(): void {
     this.loadFilterData()
     this.loadIssues()
+  }
+
+  onScopeChange(scope: 'ALL' | 'CREATED_BY_ME' | 'UPVOTED_BY_ME'): void {
+    this.scopeFilter.set(scope)
+    this.onFilterChange()
   }
 
   loadFilterData(): void {
@@ -311,6 +363,7 @@ export class CitizenReportsComponent implements OnInit {
       .filter((status) => this.selectedStatusIds().includes(status.statusId))
       .map((status) => status.statusCode)
     const selectedTypes = this.selectedTypeIds()
+    const scope = this.scopeFilter()
 
     this.dashboardService.searchIssues({
       page,
@@ -318,6 +371,8 @@ export class CitizenReportsComponent implements OnInit {
       keyword: this.searchQuery,
       statusCodes: selectedStatuses.length === this.issueStatuses().length ? undefined : selectedStatuses,
       issueTypeId: selectedTypes.length === 1 ? selectedTypes[0] : undefined,
+      createdByMe: scope === 'CREATED_BY_ME' ? true : undefined,
+      upvotedByMe: scope === 'UPVOTED_BY_ME' ? true : undefined,
     }).subscribe({
       next: (result) => {
         let items = result.items

@@ -114,6 +114,58 @@ L.Icon.Default.mergeOptions({
               </p>
             </div>
 
+            <!-- Block Duyệt Yêu cầu làm lại (Manager Review) -->
+            @if (issue()!.statusCode === 'REQUEST_REOPEN' || issue()!.statusName === 'Yêu cầu xử lý lại') {
+              <div class="rounded-xl border border-amber-300 bg-amber-50/80 p-6 shadow-sm">
+                <h2 class="mb-2 flex items-center gap-2 text-[18px] font-bold text-amber-900">
+                  <span class="material-symbols-outlined text-amber-700">gavel</span>
+                  Duyệt Yêu cầu xử lý lại từ Người dân
+                </h2>
+                <p class="mb-4 text-[14px] text-amber-800">
+                  Người dân đã gửi yêu cầu làm lại cho sự cố này. Vui lòng xem xét các hình ảnh minh chứng và quyết định Duyệt (chuyển sang trạng thái Đã phân công) hoặc Từ chối (chuyển sang trạng thái Từ chối).
+                </p>
+
+                <div class="mb-4">
+                  <label class="mb-1 block text-[12px] font-medium text-amber-900">Ghi chú duyệt / lý do từ chối (tùy chọn)</label>
+                  <textarea
+                    [(ngModel)]="reviewReopenNote"
+                    rows="2"
+                    class="w-full rounded-lg border border-amber-300 bg-white p-3 text-[14px] text-gray-800 focus:border-amber-500 focus:outline-none"
+                    placeholder="Nhập ghi chú phản hồi cho người dân..."
+                  ></textarea>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    (click)="submitReviewReopen(true)"
+                    [disabled]="isReviewingReopen()"
+                    class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                  >
+                    @if (isReviewingReopen()) {
+                      <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    } @else {
+                      <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                    }
+                    Duyệt làm lại (Đã phân công)
+                  </button>
+                  <button
+                    type="button"
+                    (click)="submitReviewReopen(false)"
+                    [disabled]="isReviewingReopen()"
+                    class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                  >
+                    @if (isReviewingReopen()) {
+                      <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    } @else {
+                      <span class="material-symbols-outlined text-[18px]">cancel</span>
+                    }
+                    Từ chối (Đã từ chối)
+                  </button>
+                </div>
+              </div>
+            }
+
             <!-- Media Gallery - Citizen Uploads -->
             @if (issue()!.imageUrls && issue()!.imageUrls.length > 0) {
               <div class="rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] p-6 shadow-sm">
@@ -872,6 +924,28 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
       error: (err) => {
         console.error('Failed to assign staff:', err)
         this.isAssigning.set(false)
+      }
+    })
+  }
+
+  reviewReopenNote = ''
+  isReviewingReopen = signal(false)
+
+  submitReviewReopen(approved: boolean): void {
+    const issue = this.issue()
+    if (!issue) return
+
+    this.isReviewingReopen.set(true)
+    this.dmService.reviewReopen(issue.issueId, approved, this.reviewReopenNote || undefined).subscribe({
+      next: (updated) => {
+        this.issue.set(updated)
+        this.isReviewingReopen.set(false)
+        this.reviewReopenNote = ''
+        this.loadIssueDetail(issue.issueId)
+      },
+      error: (err) => {
+        console.error('Failed to review reopen:', err)
+        this.isReviewingReopen.set(false)
       }
     })
   }

@@ -88,6 +88,7 @@ export interface DepartmentManagerIssueDetail {
   issueTypeName: string
   priorityName: string
   statusName: string
+  statusCode?: string
   addressText: string
   latitude: number
   longitude: number
@@ -316,6 +317,12 @@ export class DepartmentManagerService {
     const d = typeof date === 'string' ? new Date(date) : date
     const pad = (n: number) => n.toString().padStart(2, '0')
     return `${pad(d.getHours())}:${pad(d.getMinutes())} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+  }
+
+  reviewReopen(issueId: number, approved: boolean, note?: string): Observable<DepartmentManagerIssueDetail> {
+    return this.http
+      .post<ApiResponse<DepartmentManagerIssueDetail>>(`${this.baseUrl}/issues/${issueId}/review-reopen`, { approved, note })
+      .pipe(map((response) => response.data!))
   }
 
   getSlaStatusColor(status?: string): string {

@@ -56,7 +56,7 @@ import { DashboardService, ReportDetailResponse } from '../../core/services/dash
                   <a [routerLink]="['/citizen/reports', issue.id]" class="block rounded-lg border border-[var(--color-outline-variant)] p-4 hover:bg-[var(--color-surface-container)]">
                     <div class="flex items-start justify-between gap-3">
                       <div><p class="font-semibold">{{ issue.issueType.name }}</p><p class="text-xs text-[var(--color-on-surface-variant)]">#{{ issue.publicCode }} · {{ issue.currentDepartment?.name || 'Chưa định tuyến' }}</p></div>
-                      <span class="rounded-full bg-[var(--color-primary-fixed)] px-3 py-1 text-xs">{{ issue.status.name }}</span>
+                      <span class="rounded-full px-3 py-1 text-xs" [class]="getStatusBadgeClass(issue.status.code)">{{ issue.status.name }}</span>
                     </div>
                   </a>
                 }
@@ -104,5 +104,13 @@ export class ReportDetailComponent implements OnInit {
   mapUrl(item: ReportDetailResponse): SafeResourceUrl {
     const d = 0.004
     return this.sanitizer.bypassSecurityTrustResourceUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${item.longitude-d}%2C${item.latitude-d}%2C${item.longitude+d}%2C${item.latitude+d}&layer=mapnik&marker=${item.latitude}%2C${item.longitude}`)
+  }
+  getStatusBadgeClass(statusCode?: string): string {
+    const code = statusCode?.toUpperCase() || ''
+    if (code === 'RESOLVED' || code === 'CLOSED') return 'bg-green-100 text-green-800 font-semibold'
+    if (code === 'REQUEST_REOPEN') return 'bg-amber-100 text-amber-800 font-semibold'
+    if (code === 'REJECTED') return 'bg-red-100 text-red-800 font-semibold'
+    if (code === 'IN_PROGRESS' || code === 'ASSIGNED') return 'bg-blue-100 text-blue-800 font-semibold'
+    return 'bg-gray-100 text-gray-800 font-semibold'
   }
 }
