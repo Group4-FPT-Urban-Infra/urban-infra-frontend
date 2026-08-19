@@ -128,4 +128,16 @@ export class AdminDashboardService {
       { params }
     )
   }
+
+  getDepartments(): Observable<any[]> {
+    return this.http.get<any[]>(`${env.apiBaseUrl}/departments`);
+  }
+
+  manualRoute(issueId: number, departmentId: number, note?: string): Observable<any> {
+    return this.http.post<any>(`${env.apiBaseUrl}/issues/${issueId}/assignments/manual-route`, {
+      departmentId,
+      note
+    });
+  }
 }
+

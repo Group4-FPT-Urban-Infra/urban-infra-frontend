@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, effect, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core'
+﻿import { Component, OnInit, computed, inject, signal, effect, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core'
 import { CommonModule, NgStyle } from '@angular/common'
 import { AdminSidebarComponent } from './admin-sidebar.component'
 import { AuthStore } from '../../core/auth/auth.store'
@@ -41,6 +41,7 @@ interface ActivityItem {
 
 interface ReportRow {
   id: string
+  issueId: number
   title: string
   category: string
   categoryColor: string
@@ -53,6 +54,8 @@ interface ReportRow {
   assignedTo: string
   createdAt: string
 }
+
+import { Router } from '@angular/router'
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -146,7 +149,7 @@ interface ReportRow {
       <!-- Shared Admin Sidebar -->
       <app-admin-sidebar #sidebar></app-admin-sidebar>
 
-      <!-- ── Main Column ── -->
+      <!-- â”€â”€ Main Column â”€â”€ -->
       <div
         class="flex flex-1 flex-col transition-all duration-300 min-w-0"
         [style.margin-left]="sidebar.open() ? '280px' : '0px'"
@@ -181,7 +184,7 @@ interface ReportRow {
             </div>
           </div>
 
-          <!-- ── KPI Section ── -->
+          <!-- â”€â”€ KPI Section â”€â”€ -->
           <section class="mb-6">
             <!-- Section header -->
             <div class="flex items-center justify-between mb-4">
@@ -213,10 +216,10 @@ interface ReportRow {
               </div>
             }
 
-            <!-- 6 KPI Cards grid (2 cols mobile → 3 cols md → 6 cols lg) -->
+            <!-- 6 KPI Cards grid (2 cols mobile â†’ 3 cols md â†’ 6 cols lg) -->
             <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
 
-              <!-- ── Skeleton state ── -->
+              <!-- â”€â”€ Skeleton state â”€â”€ -->
               @if (kpiLoading()) {
                 @for (s of [1,2,3,4,5,6]; track s) {
                   <div class="relative overflow-hidden rounded-2xl border p-5"
@@ -229,7 +232,7 @@ interface ReportRow {
                 }
               }
 
-              <!-- ── Loaded state ── -->
+              <!-- â”€â”€ Loaded state â”€â”€ -->
               @if (!kpiLoading() && !kpiError()) {
                 @for (kpi of kpiCards(); track kpi.label) {
                   <div
@@ -274,7 +277,7 @@ interface ReportRow {
             </div>
           </section>
 
-          <!-- ── Bento Grid ── -->
+          <!-- â”€â”€ Bento Grid â”€â”€ -->
           <div class="grid grid-cols-1 gap-6 md:grid-cols-12">
 
             <!-- Incident Density Map (col-span-8) -->
@@ -462,7 +465,7 @@ interface ReportRow {
                   }
                 </div>
 
-                <!-- Y-axis labels (dynamic: 0 → maxVal rounded up nicely) -->
+                <!-- Y-axis labels (dynamic: 0 â†’ maxVal rounded up nicely) -->
                 <div class="absolute left-0 inset-y-0 flex flex-col justify-between pb-6 text-[10px] font-medium pr-2" style="color: var(--color-on-surface-variant)">
                   @for (lbl of yAxisLabels(); track lbl) {
                     <span>{{ lbl }}</span>
@@ -547,7 +550,7 @@ interface ReportRow {
                       </div>
                       <div>
                         <p class="text-sm leading-snug" style="color: var(--color-on-surface)" [innerHTML]="item.title"></p>
-                        <p class="mt-0.5 text-[11px]" style="color: var(--color-on-surface-variant)">{{ item.time }} · {{ item.subtitle }}</p>
+                        <p class="mt-0.5 text-[11px]" style="color: var(--color-on-surface-variant)">{{ item.time }} Â· {{ item.subtitle }}</p>
                       </div>
                     </div>
                   }
@@ -555,148 +558,7 @@ interface ReportRow {
               </div>
             </div>
 
-            <!-- Recent Reports Table (col-span-12) -->
-            <div
-              class="md:col-span-12 rounded-2xl border overflow-hidden"
-              style="background-color: var(--color-surface); border-color: rgba(195,198,215,0.4)"
-            >
-              <div class="flex items-center justify-between px-6 py-4 border-b" style="border-color: rgba(195,198,215,0.4)">
-                <h3 class="flex items-center gap-2 text-base font-semibold" style="color: var(--color-on-surface)">
-                  <span class="material-symbols-outlined" style="color: var(--color-primary); font-size:20px">assignment</span>
-                  Recent Incident Reports
-                </h3>
-                <div class="flex items-center gap-2">
-                  <div
-                    class="hidden md:flex items-center gap-2 rounded-xl border px-3 py-1.5"
-                    style="border-color: var(--color-outline-variant); background-color: var(--color-surface-container)"
-                  >
-                    <span class="material-symbols-outlined text-[16px]" style="color: var(--color-outline)">search</span>
-                    <input
-                      type="text"
-                      placeholder="Search reports..."
-                      class="border-none bg-transparent text-sm focus:outline-none focus:ring-0 w-36"
-                      style="color: var(--color-on-surface)"
-                    />
-                  </div>
-                  <button
-                    class="rounded-xl px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[var(--color-surface-container)]"
-                    style="border: 1px solid var(--color-outline-variant); color: var(--color-on-surface)"
-                  >
-                    <span class="material-symbols-outlined text-[16px] align-middle">tune</span>
-                  </button>
-                </div>
-              </div>
 
-              <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="border-b text-left" style="border-color: rgba(195,198,215,0.4); background-color: var(--color-surface-container-low)">
-                      <th class="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant)">ID</th>
-                      <th class="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant)">Title</th>
-                      <th class="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant)">Category</th>
-                      <th class="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant)">District</th>
-                      <th class="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant)">Status</th>
-                      <th class="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant)">Priority</th>
-                      <th class="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant)">Assigned To</th>
-                      <th class="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant)">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @if (recentIssuesLoading()) {
-                      <tr>
-                        <td colspan="8" class="text-center py-8 text-sm" style="color: var(--color-on-surface-variant)">
-                          <span class="h-6 w-6 rounded-full border-2 border-[var(--color-primary)] border-t-transparent animate-spin inline-block"></span>
-                          <p class="mt-2">Đang tải dữ liệu...</p>
-                        </td>
-                      </tr>
-                    } @else if (recentIssuesError()) {
-                      <tr>
-                        <td colspan="8" class="text-center py-8 text-sm text-red-500">
-                          {{ recentIssuesError() }}
-                        </td>
-                      </tr>
-                    } @else {
-                      @for (row of mappedRecentIssues(); track row.id; let even = $even) {
-                      <tr
-                        class="border-b transition-colors hover:bg-[var(--color-surface-container-low)] cursor-pointer"
-                        [style]="even ? 'background-color: var(--color-surface)' : 'background-color: var(--color-surface-container-lowest)'"
-                        style="border-color: rgba(195,198,215,0.25)"
-                      >
-                        <td class="px-6 py-4 text-xs font-mono font-semibold" style="color: var(--color-primary)">{{ row.id }}</td>
-                        <td class="px-6 py-4 font-medium max-w-[200px] truncate" style="color: var(--color-on-surface)">{{ row.title }}</td>
-                        <td class="px-6 py-4">
-                          <span
-                            class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                            [style]="'background-color:' + row.categoryColor + '20; color:' + row.categoryColor"
-                          >{{ row.category }}</span>
-                        </td>
-                        <td class="px-6 py-4 text-xs" style="color: var(--color-on-surface-variant)">{{ row.district }}</td>
-                        <td class="px-6 py-4">
-                          <span
-                            class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold w-fit"
-                            [style]="'background-color:' + row.statusBg + '; color:' + row.statusColor"
-                          >
-                            <span class="h-1.5 w-1.5 rounded-full" [style]="'background-color:' + row.statusColor"></span>
-                            {{ row.status }}
-                          </span>
-                        </td>
-                        <td class="px-6 py-4">
-                          <span
-                            class="rounded-full px-2.5 py-1 text-xs font-bold"
-                            [style]="'color:' + row.priorityColor"
-                          >{{ row.priority }}</span>
-                        </td>
-                        <td class="px-6 py-4 text-xs" style="color: var(--color-on-surface)">{{ row.assignedTo }}</td>
-                        <td class="px-6 py-4 text-xs" style="color: var(--color-on-surface-variant)">{{ row.createdAt }}</td>
-                      </tr>
-                      }
-                    }
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Pagination -->
-              <div
-                class="flex items-center justify-between px-6 py-4 border-t"
-                style="border-color: rgba(195,198,215,0.4)"
-              >
-                <p class="text-xs" style="color: var(--color-on-surface-variant)">
-                  Showing 
-                  @if (recentIssuesData()) {
-                    {{ (recentIssuesData()!.page - 1) * recentIssuesData()!.pageSize + 1 }}–{{ Math.min(recentIssuesData()!.page * recentIssuesData()!.pageSize, recentIssuesData()!.totalItems) }} of {{ recentIssuesData()!.totalItems }} results
-                  } @else {
-                    0-0 of 0 results
-                  }
-                </p>
-                <div class="flex gap-1">
-                  <button
-                    (click)="changePage(currentPage() - 1)"
-                    [disabled]="currentPage() === 1"
-                    class="flex h-8 w-8 items-center justify-center rounded-lg border text-xs transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    style="border-color: var(--color-outline-variant); color: var(--color-on-surface-variant)"
-                  >
-                    <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                  </button>
-                  @for (pg of getPaginationPages(); track pg) {
-                    <button
-                      (click)="changePage(pg)"
-                      class="flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors"
-                      [style]="pg === currentPage()
-                        ? 'background-color: var(--color-primary); border-color: var(--color-primary); color: white'
-                        : 'border-color: var(--color-outline-variant); color: var(--color-on-surface); background: transparent'"
-                    >{{ pg }}</button>
-                  }
-                  <button
-                    (click)="changePage(currentPage() + 1)"
-                    [disabled]="recentIssuesData() ? currentPage() === recentIssuesData()!.totalPages : true"
-                    class="flex h-8 w-8 items-center justify-center rounded-lg border text-xs transition-colors hover:bg-[var(--color-surface-container)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    style="border-color: var(--color-outline-variant); color: var(--color-on-surface-variant)"
-                  >
-                    <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-                  </button>
-                </div>
-              </div>
-            </div>
 
           </div><!-- /bento grid -->
         </main>
@@ -709,12 +571,17 @@ interface ReportRow {
 export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
   protected readonly store = inject(AuthStore)
   private readonly adminDashService = inject(AdminDashboardService)
+  private readonly router = inject(Router)
+
+  navigateToDetail(issueId: number): void {
+    void this.router.navigate(['/admin/incidents', issueId])
+  }
 
   @ViewChild('heatmapContainer', { static: false }) heatmapContainer!: ElementRef<HTMLDivElement>
   private map: L.Map | null = null
   private heatLayer: any = null
 
-  // ── KPI State (Signals) ───────────────────────────────────────────────────
+  // â”€â”€ KPI State (Signals) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   readonly kpiData    = signal<AdminKpiResponse | null>(null)
   readonly kpiLoading = signal(true)
   readonly kpiError   = signal<string | null>(null)
@@ -753,14 +620,14 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
         this.kpiLoading.set(false)
       },
       error: (err) => {
-        this.kpiError.set('Không thể kết nối đến server. Vui lòng thử lại.')
+        this.kpiError.set('KhÃ´ng thá»ƒ káº¿t ná»‘i Ä‘áº¿n server. Vui lÃ²ng thá»­ láº¡i.')
         this.kpiLoading.set(false)
         console.error('[AdminDashboard] KPI load error:', err)
       },
     })
   }
 
-  // ── Helper: map KpiItem → trend display ──────────────────────────────────
+  // â”€â”€ Helper: map KpiItem â†’ trend display â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   private formatTrend(item: KpiItem): string {
     if (item.trendPercent === null || item.trendPercent === undefined) return 'N/A'
     const abs = Math.abs(item.trendPercent)
@@ -787,7 +654,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
       : 'background-color: var(--color-error-container); color: var(--color-error)'
   }
 
-  // ── Computed KPI Cards ────────────────────────────────────────────────────
+  // â”€â”€ Computed KPI Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   readonly kpiCards = computed((): KpiCard[] => {
     const d = this.kpiData()
     if (!d) return []
@@ -875,7 +742,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // ── Category Distribution State ───────────────────────────────────────────
+  // â”€â”€ Category Distribution State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   readonly categoryDistribution = signal<CategoryDistributionPoint[]>([])
   readonly categoriesLoading    = signal(true)
   readonly categoriesError      = signal<string | null>(null)
@@ -890,7 +757,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
         this.categoriesLoading.set(false)
       },
       error: () => {
-        this.categoriesError.set('Không thể tải phân bổ danh mục.')
+        this.categoriesError.set('KhÃ´ng thá»ƒ táº£i phÃ¢n bá»• danh má»¥c.')
         this.categoriesLoading.set(false)
       }
     })
@@ -941,7 +808,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
     return gradientString
   })
 
-  // ── Incident Trends State ─────────────────────────────────────────────────
+  // â”€â”€ Incident Trends State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   readonly selectedPeriod  = signal<TrendPeriod>('ThisWeek')
   readonly trendsData      = signal<TrendDataPoint[]>([])
   readonly trendsLoading   = signal(true)
@@ -968,13 +835,13 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
         this.trendsLoading.set(false)
       },
       error: () => {
-        this.trendsError.set('Không thể tải biểu đồ. Vui lòng thử lại.')
+        this.trendsError.set('KhÃ´ng thá»ƒ táº£i biá»ƒu Ä‘á»“. Vui lÃ²ng thá»­ láº¡i.')
         this.trendsLoading.set(false)
       },
     })
   }
 
-  /** Skeleton bars với chiều cao ngẫu nhiên để trông tự nhiên hơn */
+  /** Skeleton bars vá»›i chiá»u cao ngáº«u nhiÃªn Ä‘á»ƒ trÃ´ng tá»± nhiÃªn hÆ¡n */
   readonly skeletonBars = computed(() => {
     const count = this.selectedPeriod() === 'ThisWeek' ? 7
       : this.selectedPeriod() === 'ThisYear' ? 12 : 31
@@ -984,7 +851,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
     return Array.from({ length: count }, (_, i) => ({ i, h: heights[i % heights.length] }))
   })
 
-  /** Y-axis labels: 0 ở dưới cùng → maxVal ở trên cùng, chia 5 bước */
+  /** Y-axis labels: 0 á»Ÿ dÆ°á»›i cÃ¹ng â†’ maxVal á»Ÿ trÃªn cÃ¹ng, chia 5 bÆ°á»›c */
   readonly yAxisLabels = computed((): string[] => {
     const data = this.trendsData()
     const maxRaw = data.length ? Math.max(...data.map(d => d.value)) : 50
@@ -993,7 +860,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
     return [maxVal, step * 3, step * 2, step, 0].map(v => v.toString())
   })
 
-  /** Chart bars: map TrendDataPoint → { label, value, heightPct, isMax } */
+  /** Chart bars: map TrendDataPoint â†’ { label, value, heightPct, isMax } */
   readonly chartBars = computed(() => {
     const data = this.trendsData()
     if (!data.length) return []
@@ -1008,7 +875,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
     }))
   })
 
-  // ── System Activity State ─────────────────────────────────────────────────
+  // â”€â”€ System Activity State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   readonly activityData    = signal<AuditLogResponse[]>([])
   readonly activityLoading = signal(true)
   readonly activityError   = signal<string | null>(null)
@@ -1023,7 +890,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
         this.activityLoading.set(false)
       },
       error: () => {
-        this.activityError.set('Không thể tải lịch sử hoạt động.')
+        this.activityError.set('KhÃ´ng thá»ƒ táº£i lá»‹ch sá»­ hoáº¡t Ä‘á»™ng.')
         this.activityLoading.set(false)
       }
     })
@@ -1073,7 +940,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
   })
 
 
-  // ── Recent Issues State ───────────────────────────────────────────────────
+  // â”€â”€ Recent Issues State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   readonly recentIssuesLoading = signal(true)
   readonly recentIssuesError   = signal<string | null>(null)
   readonly recentIssuesData    = signal<PagedResponse<IssueSummaryResponse> | null>(null)
@@ -1090,7 +957,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
         this.recentIssuesLoading.set(false)
       },
       error: () => {
-        this.recentIssuesError.set('Không thể tải danh sách sự cố.')
+        this.recentIssuesError.set('KhÃ´ng thá»ƒ táº£i danh sÃ¡ch sá»± cá»‘.')
         this.recentIssuesLoading.set(false)
       }
     })
@@ -1103,15 +970,15 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
     return data.items.map(issue => {
       // Map Priority Color
       let priorityColor = 'var(--color-primary)'
-      let priorityEmoji = '🟢'
+      let priorityEmoji = 'ðŸŸ¢'
       switch (issue.priority?.code?.toUpperCase()) {
         case 'CRITICAL':
           priorityColor = 'var(--color-error)'
-          priorityEmoji = '🔴'
+          priorityEmoji = 'ðŸ”´'
           break
         case 'HIGH':
           priorityColor = 'var(--color-tertiary)'
-          priorityEmoji = '🟡'
+          priorityEmoji = 'ðŸŸ¡'
           break
       }
 
@@ -1133,13 +1000,14 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
       // Map Category Color
       let catColor = 'var(--color-outline)'
       const cat = issue.issueType?.name?.toUpperCase() || ''
-      if (cat.includes('INFRASTRUCTURE') || cat.includes('HẠ TẦNG')) catColor = 'var(--color-primary)'
-      else if (cat.includes('SAFETY') || cat.includes('AN TOÀN')) catColor = 'var(--color-error)'
-      else if (cat.includes('TRAFFIC') || cat.includes('GIAO THÔNG') || cat.includes('UTILITIES') || cat.includes('TIỆN ÍCH')) catColor = 'var(--color-tertiary)'
-      else if (cat.includes('ENVIRONMENT') || cat.includes('MÔI TRƯỜNG')) catColor = 'var(--color-secondary)'
+      if (cat.includes('INFRASTRUCTURE') || cat.includes('Háº  Táº¦NG')) catColor = 'var(--color-primary)'
+      else if (cat.includes('SAFETY') || cat.includes('AN TOÃ€N')) catColor = 'var(--color-error)'
+      else if (cat.includes('TRAFFIC') || cat.includes('GIAO THÃ”NG') || cat.includes('UTILITIES') || cat.includes('TIá»†N ÃCH')) catColor = 'var(--color-tertiary)'
+      else if (cat.includes('ENVIRONMENT') || cat.includes('MÃ”I TRÆ¯á»œNG')) catColor = 'var(--color-secondary)'
 
       return {
         id: issue.publicCode || `#IR-${issue.id}`,
+        issueId: issue.id,
         title: issue.title,
         category: issue.issueType?.name || 'N/A',
         categoryColor: catColor,
@@ -1181,7 +1049,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
     return pages
   }
 
-  // ── Heatmap State ─────────────────────────────────────────────────────────
+  // â”€â”€ Heatmap State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   readonly heatmapData       = signal<HeatmapDataPoint[]>([])
   readonly heatmapLoading    = signal(true)
   readonly heatmapError      = signal<string | null>(null)
@@ -1202,7 +1070,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
         this.heatmapLoading.set(false)
       },
       error: () => {
-        this.heatmapError.set('Không thể tải dữ liệu bản đồ nhiệt.')
+        this.heatmapError.set('KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u báº£n Ä‘á»“ nhiá»‡t.')
         this.heatmapLoading.set(false)
       }
     })
@@ -1267,11 +1135,11 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
       
       if (!baseCoord) {
         // Simple search by name if ID doesn't match
-        if (item.districtName.includes('Hạ Long')) baseCoord = districtCoordsMap['HL']
-        else if (item.districtName.includes('Bãi Cháy')) baseCoord = districtCoordsMap['BC']
-        else if (item.districtName.includes('Cẩm Phả')) baseCoord = districtCoordsMap['CP']
-        else if (item.districtName.includes('Uông Bí')) baseCoord = districtCoordsMap['UB']
-        else if (item.districtName.includes('Móng Cái')) baseCoord = districtCoordsMap['MC']
+        if (item.districtName.includes('Háº¡ Long')) baseCoord = districtCoordsMap['HL']
+        else if (item.districtName.includes('BÃ£i ChÃ¡y')) baseCoord = districtCoordsMap['BC']
+        else if (item.districtName.includes('Cáº©m Pháº£')) baseCoord = districtCoordsMap['CP']
+        else if (item.districtName.includes('UÃ´ng BÃ­')) baseCoord = districtCoordsMap['UB']
+        else if (item.districtName.includes('MÃ³ng CÃ¡i')) baseCoord = districtCoordsMap['MC']
         else baseCoord = defaultCoord
       }
       
@@ -1303,3 +1171,4 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
     }).addTo(this.map)
   }
 }
+

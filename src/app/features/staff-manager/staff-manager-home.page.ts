@@ -120,50 +120,100 @@ import {
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <!-- Unassigned Incidents Table -->
         <div class="flex flex-col overflow-hidden rounded-xl border border-[var(--color-surface-container-highest)] bg-white shadow-sm lg:col-span-2">
-          <div class="flex items-center justify-between border-b border-[var(--color-outline-variant)]/30 bg-[var(--color-surface)]/50 px-6 py-4">
-            <h3 class="text-[18px] font-semibold text-[var(--color-on-surface)]">Unassigned Incidents</h3>
-            <a routerLink="/staff-manager/incidents" [queryParams]="{filter: 'unassigned'}" class="flex items-center gap-1 text-[12px] font-medium text-[var(--color-primary)] hover:underline">
-              View All
-              <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </a>
+          <div class="flex items-center justify-between border-b border-[var(--color-outline-variant)]/30 bg-[var(--color-surface)]/50 px-6 py-0">
+            <div class="flex gap-6">
+              <button (click)="activeTab.set('unassigned')" [class.border-b-2]="activeTab() === 'unassigned'" [class.border-[var(--color-primary)]]="activeTab() === 'unassigned'" [class.text-[var(--color-primary)]]="activeTab() === 'unassigned'" class="py-4 text-[16px] font-semibold text-[var(--color-on-surface-variant)] hover:text-[var(--color-primary)]">
+                Unassigned Incidents
+              </button>
+              <button (click)="activeTab.set('requests')" [class.border-b-2]="activeTab() === 'requests'" [class.border-[var(--color-primary)]]="activeTab() === 'requests'" [class.text-[var(--color-primary)]]="activeTab() === 'requests'" class="py-4 text-[16px] font-semibold text-[var(--color-on-surface-variant)] hover:text-[var(--color-primary)] flex items-center gap-2">
+                Re-route Requests
+                @if (reRouteRequests().length > 0) {
+                  <span class="rounded-full bg-[var(--color-error)] px-2 py-0.5 text-[10px] text-white">{{reRouteRequests().length}}</span>
+                }
+              </button>
+            </div>
+            @if (activeTab() === 'unassigned') {
+              <a routerLink="/staff-manager/incidents" [queryParams]="{filter: 'unassigned'}" class="flex items-center gap-1 text-[12px] font-medium text-[var(--color-primary)] hover:underline">
+                View All
+                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </a>
+            }
           </div>
           <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-left">
-              <thead>
-                <tr class="bg-[var(--color-surface-container-low)] text-[11px] font-medium uppercase tracking-wider text-[var(--color-on-surface-variant)]">
-                  <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">ID</th>
-                  <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Type</th>
-                  <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Priority</th>
-                  <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Time Logged</th>
-                  <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody class="text-[14px] text-[var(--color-on-surface)]">
-                @for (issue of unassignedIssues(); track issue.issueId) {
-                  <tr class="border-b border-[var(--color-outline-variant)]/20 transition-colors hover:bg-[var(--color-surface-container-lowest)]">
-                    <td class="p-4 font-medium">{{ issue.publicCode }}</td>
-                    <td class="p-4">{{ issue.issueTypeName }}</td>
-                    <td class="p-4">
-                      <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium" [style.background-color]="issue.priorityColor + '20'" [style.color]="issue.priorityColor">
-                        {{ issue.priorityName }}
-                      </span>
-                    </td>
-                    <td class="p-4 text-[var(--color-on-surface-variant)]">{{ formatDate(issue.reportedAt) }}</td>
-                    <td class="p-4">
-                      <button (click)="openAssignModal(issue)" class="text-[12px] font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-container)]">
-                        Assign
-                      </button>
-                    </td>
+            @if (activeTab() === 'unassigned') {
+              <table class="w-full border-collapse text-left">
+                <thead>
+                  <tr class="bg-[var(--color-surface-container-low)] text-[11px] font-medium uppercase tracking-wider text-[var(--color-on-surface-variant)]">
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">ID</th>
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Type</th>
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Priority</th>
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Time Logged</th>
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Action</th>
                   </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="5" class="p-8 text-center text-[var(--color-on-surface-variant)]">
-                      No unassigned incidents
-                    </td>
+                </thead>
+                <tbody class="text-[14px] text-[var(--color-on-surface)]">
+                  @for (issue of unassignedIssues(); track issue.issueId) {
+                    <tr class="border-b border-[var(--color-outline-variant)]/20 transition-colors hover:bg-[var(--color-surface-container-lowest)]">
+                      <td class="p-4 font-medium">{{ issue.publicCode }}</td>
+                      <td class="p-4">{{ issue.issueTypeName }}</td>
+                      <td class="p-4">
+                        <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium" [style.background-color]="issue.priorityColor + '20'" [style.color]="issue.priorityColor">
+                          {{ issue.priorityName }}
+                        </span>
+                      </td>
+                      <td class="p-4 text-[var(--color-on-surface-variant)]">{{ formatDate(issue.reportedAt) }}</td>
+                      <td class="p-4">
+                        <button (click)="openAssignModal(issue)" class="text-[12px] font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-container)]">
+                          Assign
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="5" class="p-8 text-center text-[var(--color-on-surface-variant)]">
+                        No unassigned incidents
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <table class="w-full border-collapse text-left">
+                <thead>
+                  <tr class="bg-[var(--color-surface-container-low)] text-[11px] font-medium uppercase tracking-wider text-[var(--color-on-surface-variant)]">
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Issue ID</th>
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">From Dept</th>
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Note</th>
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium">Time</th>
+                    <th class="border-b border-[var(--color-outline-variant)]/30 p-4 font-medium text-right">Actions</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody class="text-[14px] text-[var(--color-on-surface)]">
+                  @for (req of reRouteRequests(); track req.id) {
+                    <tr class="border-b border-[var(--color-outline-variant)]/20 transition-colors hover:bg-[var(--color-surface-container-lowest)]">
+                      <td class="p-4 font-medium text-[var(--color-primary)]"><a [routerLink]="['/staff-manager/incidents', req.issueId]">#{{ req.issueId }}</a></td>
+                      <td class="p-4">{{ req.currentDepartmentName }}</td>
+                      <td class="p-4 text-[12px] text-[var(--color-on-surface-variant)] max-w-[200px] truncate" [title]="req.note || ''">{{ req.note || '-' }}</td>
+                      <td class="p-4 text-[var(--color-on-surface-variant)]">{{ formatDate(req.requestedAt) }}</td>
+                      <td class="p-4 text-right flex justify-end gap-2">
+                        <button (click)="acceptReRoute(req.id)" class="text-[12px] font-medium text-white bg-[var(--color-primary)] px-3 py-1.5 rounded transition-colors hover:bg-[var(--color-primary-container)] hover:text-[var(--color-on-primary-container)]">
+                          Accept
+                        </button>
+                        <button (click)="rejectReRoute(req.id)" class="text-[12px] font-medium text-[var(--color-error)] border border-[var(--color-error)] px-3 py-1.5 rounded transition-colors hover:bg-[var(--color-error-container)]">
+                          Reject
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="5" class="p-8 text-center text-[var(--color-on-surface-variant)]">
+                        No pending requests
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
           </div>
         </div>
 
@@ -249,6 +299,8 @@ export class StaffManagerHomeComponent implements OnInit {
   stats = signal<DepartmentManagerDashboardStats | null>(null)
   workload = signal<TeamWorkloadItem[]>([])
   unassignedIssues = signal<DepartmentManagerIssueSummary[]>([])
+  reRouteRequests = signal<any[]>([])
+  activeTab = signal<'unassigned' | 'requests'>('unassigned')
   showAssignModal = signal(false)
   selectedIssue = signal<DepartmentManagerIssueSummary | null>(null)
   selectedUserId = ''
@@ -273,6 +325,33 @@ export class StaffManagerHomeComponent implements OnInit {
     this.dmService.getUnassignedIssues(1, 5).subscribe({
       next: (data) => this.unassignedIssues.set(data),
       error: (err) => console.error('Failed to load unassigned issues:', err),
+    })
+
+    this.dmService.getIncomingReRouteRequests().subscribe({
+      next: (data: any[]) => this.reRouteRequests.set(data),
+      error: (err: any) => console.error('Failed to load requests:', err),
+    })
+  }
+
+  acceptReRoute(requestId: number): void {
+    if (!confirm('Are you sure you want to accept this issue transfer?')) return;
+    this.dmService.acceptReRouteRequest(requestId).subscribe({
+      next: () => {
+        alert('Đã chấp nhận chuyển tiếp thành công.');
+        this.loadData();
+      },
+      error: (err: any) => alert(err.error?.message || 'Lỗi khi chấp nhận')
+    })
+  }
+
+  rejectReRoute(requestId: number): void {
+    if (!confirm('Are you sure you want to reject this issue transfer?')) return;
+    this.dmService.rejectReRouteRequest(requestId).subscribe({
+      next: () => {
+        alert('Đã từ chối chuyển tiếp.');
+        this.loadData();
+      },
+      error: (err: any) => alert(err.error?.message || 'Lỗi khi từ chối')
     })
   }
 

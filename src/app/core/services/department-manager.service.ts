@@ -350,4 +350,16 @@ export class DepartmentManagerService {
       avgResolutionTimeMinutes: 0,
     }
   }
+
+  getIncomingReRouteRequests(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/re-route-requests/incoming`)
+  }
+
+  acceptReRouteRequest(requestId: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}/re-route-requests/${requestId}/accept`, {})
+  }
+
+  rejectReRouteRequest(requestId: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}/re-route-requests/${requestId}/reject`, {})
+  }
 }

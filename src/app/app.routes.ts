@@ -112,6 +112,18 @@ export const routes: Routes = [
           import('./features/admin/area-management.page').then((m) => m.AreaManagementPage),
       },
       {
+        path: 'admin/incidents',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/admin-incidents.page').then((m) => m.AdminIncidentsPage),
+      },
+      {
+        path: 'admin/incidents/:id',
+        canActivate: [roleGuard(['Admin'])],
+        loadComponent: () =>
+          import('./features/admin/admin-incident-detail.page').then((m) => m.AdminIncidentDetailComponent),
+      },
+      {
         path: 'profile',
         canActivate: [authGuard],
         loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
