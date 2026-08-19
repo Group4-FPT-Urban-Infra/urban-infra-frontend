@@ -176,6 +176,53 @@ import type { IssueDetailResponse, IssueTimelineItemResponse } from '../../core/
               </div>
             </div>
 
+            <!-- Block Yêu cầu làm lại (Request Re-work) -->
+            @if (issue()!.status.code === 'RESOLVED' || issue()!.status.code === 'RESOLVE') {
+              <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-6 shadow-sm">
+                <h2 class="mb-2 text-[18px] font-semibold text-amber-900 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-amber-700">published_with_changes</span>
+                  Yêu cầu xử lý lại sự cố
+                </h2>
+                <p class="mb-4 text-[14px] text-amber-800">
+                  Nếu sự cố chưa được xử lý triệt để, bạn có thể tải ảnh minh chứng và gửi yêu cầu làm lại để cơ quan chức năng tiếp tục xử lý.
+                </p>
+                <div class="space-y-4">
+                  <div>
+                    <label class="mb-1 block text-[12px] font-medium text-amber-900">Lý do yêu cầu làm lại *</label>
+                    <textarea
+                      class="w-full rounded-lg border border-amber-300 bg-white p-3 text-[14px] text-gray-800 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      rows="3"
+                      placeholder="Mô tả cụ thể vấn đề chưa được xử lý tốt..."
+                      [(ngModel)]="reopenNote"
+                    ></textarea>
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-[12px] font-medium text-amber-900">Ảnh minh chứng đính kèm</label>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      (change)="onReopenFilesSelected($event)"
+                      class="block w-full text-xs text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-amber-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-amber-800 hover:file:bg-amber-200"
+                    />
+                  </div>
+                  <div class="flex justify-end">
+                    <button
+                      type="button"
+                      [disabled]="!reopenNote.trim() || isSubmittingReopen()"
+                      (click)="submitReopenRequest()"
+                      class="flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-2 text-[14px] font-medium text-white shadow transition-colors hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      @if (isSubmittingReopen()) {
+                        <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+                      }
+                      Gửi yêu cầu làm lại
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+
             <!-- Comment API chưa thuộc domain hiện tại; ẩn khỏi UI cho đến khi có contract chính thức. -->
             @if (false) {
             <!-- Comments & Interaction Section -->
@@ -437,6 +484,43 @@ export class IncidentDetailComponent implements OnInit {
       .slice(-2)
       .join('')
       .toUpperCase()
+  }
+
+  reopenNote = ''
+  reopenFiles: File[] = []
+  isSubmittingReopen = signal(false)
+
+  onReopenFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement
+    if (input.files) {
+      this.reopenFiles = Array.from(input.files)
+    }
+  }
+
+  submitReopenRequest(): void {
+    const current = this.issue()
+    if (!current || !this.reopenNote.trim()) return
+
+    this.isSubmittingReopen.set(true)
+    const formData = new FormData()
+    formData.append('Note', this.reopenNote.trim())
+    for (const file of this.reopenFiles) {
+      formData.append('Images', file)
+    }
+
+    this.dashboardService.requestReopen(current.id, formData).subscribe({
+      next: (updated) => {
+        this.issue.set(updated)
+        this.isSubmittingReopen.set(false)
+        this.reopenNote = ''
+        this.reopenFiles = []
+        this.loadIssue(current.id)
+      },
+      error: (err) => {
+        console.error('Failed to request reopen:', err)
+        this.isSubmittingReopen.set(false)
+      }
+    })
   }
 
   submitComment(): void {
