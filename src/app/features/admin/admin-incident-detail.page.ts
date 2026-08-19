@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms'
 import * as L from 'leaflet'
 import { DepartmentManagerService } from '../../core/services/department-manager.service'
 import { DashboardService } from '../../core/services/dashboard.service'
+import { AdminDashboardService } from './services/admin-dashboard.service'
 import {
   DepartmentManagerIssueDetail,
   DepartmentManagerUpdateIssueStatusRequest,
@@ -20,7 +21,7 @@ L.Icon.Default.mergeOptions({
 })
 
 @Component({
-  selector: 'app-staff-manager-incident-detail',
+  selector: 'app-admin-incident-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule],
   template: `
@@ -49,7 +50,7 @@ L.Icon.Default.mergeOptions({
 
       <!-- Breadcrumbs -->
       <nav class="mb-6 flex items-center text-[12px] font-medium text-[var(--color-on-surface-variant)]">
-        <a class="hover:text-[var(--color-primary)] transition-colors" routerLink="/staff-manager/incidents">Incidents</a>
+        <a class="hover:text-[var(--color-primary)] transition-colors" routerLink="/admin">Dashboard</a>
         <span class="material-symbols-outlined mx-2 text-[16px]">chevron_right</span>
         <span class="font-medium text-[var(--color-primary)]">{{ issue()?.publicCode || 'Loading...' }}</span>
       </nav>
@@ -183,13 +184,15 @@ L.Icon.Default.mergeOptions({
                   <span class="material-symbols-outlined text-[var(--color-primary)]">assignment_ind</span>
                   Assignment
                 </h2>
-                <button
-                  (click)="openReassignModal()"
-                  class="flex items-center gap-1 rounded-lg border border-[var(--color-outline-variant)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-variant)]/50"
-                >
-                  <span class="material-symbols-outlined text-[16px]">swap_horiz</span>
-                  Re-route
-                </button>
+                @if (!issue()!.currentAssignment) {
+                  <button
+                    (click)="openReassignModal()"
+                    class="flex items-center gap-1 rounded-lg border border-[var(--color-outline-variant)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-variant)]/50"
+                  >
+                    <span class="material-symbols-outlined text-[16px]">swap_horiz</span>
+                    Manual Route
+                  </button>
+                }
               </div>
               @if (issue()!.currentAssignment) {
                 <div class="mb-4 rounded-lg bg-[var(--color-surface)] p-4">
@@ -304,7 +307,7 @@ L.Icon.Default.mergeOptions({
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" (click)="closeReassignModal()">
         <div class="w-full max-w-md rounded-2xl bg-[var(--color-surface)] p-6 shadow-2xl" (click)="$event.stopPropagation()">
           <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-[var(--color-on-surface)]">Re-route Issue</h2>
+            <h2 class="text-xl font-semibold text-[var(--color-on-surface)]">Manual Route</h2>
             <button (click)="closeReassignModal()" class="rounded-full p-1 hover:bg-[var(--color-surface-variant)]">
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -541,13 +544,14 @@ L.Icon.Default.mergeOptions({
     `,
   ],
 })
-export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+export class AdminIncidentDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('mapContainer') mapContainer!: ElementRef
 
   private readonly route = inject(ActivatedRoute)
   private readonly router = inject(Router)
   private readonly dmService = inject(DepartmentManagerService)
   private readonly dashboardService = inject(DashboardService)
+  private readonly adminDashService = inject(AdminDashboardService)
 
   issue = signal<DepartmentManagerIssueDetail | null>(null)
   isLoading = signal(true)
@@ -810,17 +814,15 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
 
     this.isReassigning.set(true)
 
-    this.dashboardService.post<any>(`/issues/${issue.issueId}/re-route`, {
-      departmentId,
-      note: this.reassignNote || undefined
-    }).subscribe({
+    this.adminDashService.manualRoute(issue.issueId, departmentId, this.reassignNote || undefined).subscribe({
       next: () => {
-        alert('Đã gửi yêu cầu chuyển đơn vị. Vui lòng chờ phản hồi.');
+        alert('Phân công thủ công thành công.');
         this.isReassigning.set(false)
         this.closeReassignModal()
+        this.loadIssueDetail(issue.issueId)
       },
       error: (err) => {
-        console.error('Failed to reassign issue:', err)
+        alert('Lỗi: ' + (err.error?.message || err.message));
         this.isReassigning.set(false)
       }
     })

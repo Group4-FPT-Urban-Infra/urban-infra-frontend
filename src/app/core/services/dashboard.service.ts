@@ -37,6 +37,7 @@ export interface IssueSummaryResponse {
   upvoteCount: number
   hasUpvoted: boolean
   reportedAt: string
+  isAssigned: boolean
 }
 
 export interface NearbyIssueResponse extends IssueSummaryResponse {

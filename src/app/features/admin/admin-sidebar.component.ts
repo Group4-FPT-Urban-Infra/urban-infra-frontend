@@ -134,6 +134,7 @@ export class AdminSidebarComponent {
 
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', route: '/admin', exact: true },
+    { label: 'Incidents', icon: 'report_problem', route: '/admin/incidents', exact: true },
     { label: 'SLAs', icon: 'timer', route: '/slas' },
     { label: 'Escalation Rules', icon: 'trending_up', route: '/escalation-rules' },
     { label: 'Areas', icon: 'location_on', route: '/areas' },
