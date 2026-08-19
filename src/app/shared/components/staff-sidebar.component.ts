@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { Router, RouterLink, RouterLinkActive } from '@angular/router'
+import { RouterLink, RouterLinkActive } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
 
 @Component({
@@ -8,79 +8,291 @@ import { AuthStore } from '../../core/auth/auth.store'
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
-    <!-- 
-      Sidebar is hidden on mobile (screens smaller than 'md') and becomes a fixed column on larger screens.
-      This works with the 'md:ml-[280px]' class in the StaffLayoutComponent.
-      A full mobile-first responsive sidebar with a hamburger menu can be implemented later.
-    -->
+    <!-- SideNavBar (Desktop) -->
     <aside
-      class="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-[280px] z-10 bg-white dark:bg-gray-800 border-r dark:border-gray-700"
+      class="fixed top-0 left-0 z-40 hidden h-screen w-[280px] flex-col border-r border-[var(--color-outline-variant)] bg-[var(--color-surface)] py-6 shadow-sm md:flex"
     >
-      <div class="flex h-full flex-col">
-        <!-- Logo -->
-        <div class="flex h-16 shrink-0 items-center border-b px-6 dark:border-gray-700">
-          <a routerLink="/" class="flex items-center gap-2 text-lg font-semibold text-gray-800 dark:text-white">
-            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">apartment</span>
-            <span>Urban Infra</span>
+      <!-- Header -->
+      <div
+        class="mb-6 flex items-center gap-3 border-b border-[var(--color-outline-variant)] px-6 pb-4"
+      >
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-primary-container)]"
+        >
+          <span
+            class="material-symbols-outlined text-[var(--color-on-primary-container)]"
+            style="font-variation-settings:'FILL' 1; font-size: 24px;"
+          >
+            location_city
+          </span>
+        </div>
+        <div>
+          <a routerLink="/" class="block">
+            <h1
+              class="text-[20px] font-semibold text-[var(--color-on-surface)]"
+              style="line-height: 28px;"
+            >
+              Urban Infrastructure
+            </h1>
           </a>
+          <p
+            class="text-[12px] text-[var(--color-on-surface-variant)]"
+            style="letter-spacing: 0.01em;"
+          >
+            City Management Portal
+          </p>
+        </div>
+      </div>
+
+      <!-- CTA Button -->
+      <div class="mb-4 px-6">
+        <button
+          class="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-primary-container)] px-4 py-2 text-[12px] font-medium text-[var(--color-on-primary-container)] shadow-sm transition-opacity hover:opacity-90"
+        >
+          <span class="material-symbols-outlined text-[18px]">add</span>
+          New Report
+        </button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex flex-1 flex-col gap-1 overflow-y-auto px-2 text-[12px]">
+        <!-- Home Tab -->
+        <a
+          routerLink="/staff/dashboard"
+          routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
+        >
+          <span class="material-symbols-outlined">dashboard</span>
+          Home
+        </a>
+
+        <!-- Map View Tab -->
+        <a
+          routerLink="/staff/map"
+          routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
+        >
+          <span class="material-symbols-outlined">map</span>
+          Map View
+        </a>
+
+        <!-- Incidents Tab -->
+        <a
+          routerLink="/staff/incidents"
+          routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
+        >
+          <span class="material-symbols-outlined">assignment</span>
+          Incidents
+        </a>
+      </nav>
+
+      <!-- Footer Tabs -->
+      <div
+        class="mt-auto flex flex-col gap-1 border-t border-[var(--color-outline-variant)] px-2 pt-4 pb-4"
+      >
+        <a
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
+          href="#"
+        >
+          <span class="material-symbols-outlined">contact_support</span>
+          Support
+        </a>
+
+        <a
+          routerLink="/staff/profile"
+          routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
+        >
+          <div class="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary-container)]">
+            @if (authStore.user(); as user) {
+              <span class="text-[10px] font-bold text-[var(--color-on-primary-container)]">{{ getInitials(user.fullName) }}</span>
+            }
+          </div>
+          <span class="min-w-0 flex-1 truncate text-[12px]">
+            {{ authStore.user()?.fullName ?? 'User Info' }}
+          </span>
+        </a>
+
+        <a
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-error)] transition-all hover:bg-[var(--color-error-container)]"
+          (click)="logout()"
+          role="button"
+        >
+          <span class="material-symbols-outlined">logout</span>
+          Logout
+        </a>
+      </div>
+    </aside>
+
+    <!-- Mobile Sidebar (Overlay) -->
+    <aside class="fixed inset-0 z-50 flex md:hidden" [class.hidden]="!mobileMenuOpen">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/50" (click)="toggleMobileMenu()"></div>
+
+      <!-- Menu Panel -->
+      <div class="relative flex h-full w-[280px] flex-col bg-[var(--color-surface)]">
+        <!-- Header -->
+        <div
+          class="mb-6 flex items-center gap-3 border-b border-[var(--color-outline-variant)] px-6 pb-4"
+        >
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-primary-container)]"
+          >
+            <span
+              class="material-symbols-outlined text-[var(--color-on-primary-container)]"
+              style="font-variation-settings:'FILL' 1; font-size: 24px;"
+            >
+              location_city
+            </span>
+          </div>
+          <div>
+            <a routerLink="/" class="block">
+              <h1
+                class="text-[20px] font-semibold text-[var(--color-on-surface)]"
+                style="line-height: 28px;"
+              >
+                Urban Infrastructure
+              </h1>
+            </a>
+            <p class="text-[12px] text-[var(--color-on-surface-variant)]">City Management Portal</p>
+          </div>
+        </div>
+
+        <!-- CTA Button -->
+        <div class="mb-4 px-6">
+          <button
+            class="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-primary-container)] px-4 py-2 text-[12px] font-medium text-[var(--color-on-primary-container)] shadow-sm transition-opacity hover:opacity-90"
+          >
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            New Report
+          </button>
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 space-y-1 overflow-y-auto p-4">
+        <nav class="flex flex-1 flex-col gap-1 px-2 text-[12px]">
           <a
             routerLink="/staff/dashboard"
-            routerLinkActive="bg-gray-100 text-blue-600 dark:bg-gray-700 dark:text-blue-400"
+            routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
             [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            (click)="toggleMobileMenu()"
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
           >
             <span class="material-symbols-outlined">dashboard</span>
-            <span>Dashboard</span>
+            Home
           </a>
+
           <a
             routerLink="/staff/map"
-            routerLinkActive="bg-gray-100 text-blue-600 dark:bg-gray-700 dark:text-blue-400"
-            class="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="toggleMobileMenu()"
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
           >
             <span class="material-symbols-outlined">map</span>
-            <span>Map</span>
+            Map View
           </a>
+
           <a
             routerLink="/staff/incidents"
-            routerLinkActive="bg-gray-100 text-blue-600 dark:bg-gray-700 dark:text-blue-400"
-            class="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="toggleMobileMenu()"
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
           >
             <span class="material-symbols-outlined">assignment</span>
-            <span>Incidents</span>
+            Incidents
           </a>
         </nav>
 
-        <!-- User/Logout section -->
-        <div class="mt-auto border-t p-4 dark:border-gray-700">
-          <div class="flex items-center gap-3">
-            <div class="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-              <span class="material-symbols-outlined text-gray-500 dark:text-gray-400">person</span>
+        <!-- Footer -->
+        <div
+          class="flex flex-col gap-1 border-t border-[var(--color-outline-variant)] px-2 pt-4 pb-4"
+        >
+          <a
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
+            href="#"
+          >
+            <span class="material-symbols-outlined">contact_support</span>
+            Support
+          </a>
+
+          <a
+            routerLink="/staff/profile"
+            routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="toggleMobileMenu()"
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
+          >
+            <div class="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary-container)]">
+              @if (authStore.user(); as user) {
+                <span class="text-[10px] font-bold text-[var(--color-on-primary-container)]">{{ getInitials(user.fullName) }}</span>
+              }
             </div>
-            @if (authStore.user(); as user) {
-            <div class="flex-1 overflow-hidden">
-              <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{{ user.fullName }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.roles.join(', ') }}</p>
-            </div>
-            }
-            <button (click)="logout()" title="Logout" class="ml-auto text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500">
-              <span class="material-symbols-outlined">logout</span>
-            </button>
-          </div>
+            <span class="min-w-0 flex-1 truncate text-[12px]">
+              {{ authStore.user()?.fullName ?? 'User Info' }}
+            </span>
+          </a>
+
+          <a
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-error)] transition-all hover:bg-[var(--color-error-container)]"
+            (click)="logout()"
+            role="button"
+          >
+            <span class="material-symbols-outlined">logout</span>
+            Logout
+          </a>
         </div>
       </div>
     </aside>
   `,
+  styles: [
+    `
+      :host {
+        display: contents;
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24;
+      }
+
+      a[routerLinkActive='bg-[var(--color-secondary-container)]'] {
+        font-weight: 500;
+      }
+    `,
+  ],
 })
 export class StaffSidebarComponent {
-  readonly authStore = inject(AuthStore)
-  private readonly router = inject(Router)
+  protected readonly authStore = inject(AuthStore)
+  mobileMenuOpen = false
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen = false
+  }
 
   logout(): void {
     this.authStore.logout()
-    this.router.navigate(['/login'])
+    this.closeMobileMenu()
+  }
+
+  getInitials(name: string): string {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase()
   }
 }

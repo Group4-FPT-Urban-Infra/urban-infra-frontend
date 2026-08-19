@@ -45,7 +45,7 @@ export const routes: Routes = [
         canActivate: [authGuard],
         loadComponent: () =>
           import('./features/create-incident/create-incident.page').then(
-            (m) => m.CreateIncidentPage
+            (m) => m.CreateIncidentPage,
           ),
       },
       {
@@ -80,23 +80,21 @@ export const routes: Routes = [
         canActivate: [roleGuard(['Admin'])],
         loadComponent: () =>
           import('./features/admin/department-management.page').then(
-            (m) => m.DepartmentManagementPage
+            (m) => m.DepartmentManagementPage,
           ),
       },
       {
         path: 'slas',
         canActivate: [roleGuard(['Admin'])],
         loadComponent: () =>
-          import('./features/admin/slas-management.page').then(
-            (m) => m.SlasManagementPage
-          ),
+          import('./features/admin/slas-management.page').then((m) => m.SlasManagementPage),
       },
       {
         path: 'escalation-rules',
         canActivate: [roleGuard(['Admin'])],
         loadComponent: () =>
           import('./features/admin/escalation-rules-management.page').then(
-            (m) => m.EscalationRulesManagementPage
+            (m) => m.EscalationRulesManagementPage,
           ),
       },
       {
@@ -104,16 +102,14 @@ export const routes: Routes = [
         canActivate: [roleGuard(['Admin'])],
         loadComponent: () =>
           import('./features/admin/incident-category-management.page').then(
-            (m) => m.IncidentCategoryManagementPage
+            (m) => m.IncidentCategoryManagementPage,
           ),
       },
       {
         path: 'areas',
         canActivate: [roleGuard(['Admin'])],
         loadComponent: () =>
-          import('./features/admin/area-management.page').then(
-            (m) => m.AreaManagementPage
-          ),
+          import('./features/admin/area-management.page').then((m) => m.AreaManagementPage),
       },
       {
         path: 'profile',
@@ -177,11 +173,6 @@ export const routes: Routes = [
           import('./features/staff/staff-home.page').then((m) => m.StaffHomeComponent),
       },
       {
-        path: 'map',
-        loadComponent: () =>
-          import('./features/staff/staff-map.page').then((m) => m.StaffMapComponent),
-      },
-      {
         path: 'incidents',
         loadComponent: () =>
           import('./features/staff/staff-incidents.page').then((m) => m.StaffIncidentsComponent),
@@ -189,14 +180,23 @@ export const routes: Routes = [
       {
         path: 'incidents/:id',
         loadComponent: () =>
-          import('./features/staff/staff-incident-detail.page').then((m) => m.StaffIncidentDetailComponent),
+          import('./features/staff/staff-incident-detail.page').then(
+            (m) => m.StaffIncidentDetailComponent,
+          ),
+      },
+      {
+        path: 'map',
+        loadComponent: () =>
+          import('./features/staff/staff-map.page').then((m) => m.StaffMapComponent),
       },
     ],
   },
   {
     path: 'staff-manager',
     loadComponent: () =>
-      import('./shared/layout/staff-manager-layout.component').then((m) => m.StaffManagerLayoutComponent),
+      import('./shared/layout/staff-manager-layout.component').then(
+        (m) => m.StaffManagerLayoutComponent,
+      ),
     children: [
       {
         path: '',
@@ -206,45 +206,56 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('./features/staff-manager/staff-manager-home.page').then((m) => m.StaffManagerHomeComponent),
+          import('./features/staff-manager/staff-manager-home.page').then(
+            (m) => m.StaffManagerHomeComponent,
+          ),
       },
       {
         path: 'map',
         loadComponent: () =>
-
-          import('./features/staff-manager/staff-manager-map.page').then((m) => m.DepartmentManagerMapComponent),
-
+          import('./features/staff-manager/staff-manager-map.page').then(
+            (m) => m.DepartmentManagerMapComponent,
+          ),
       },
       {
         path: 'incidents',
         loadComponent: () =>
-          import('./features/staff-manager/staff-manager-incidents.page').then((m) => m.StaffManagerIncidentsComponent),
+          import('./features/staff-manager/staff-manager-incidents.page').then(
+            (m) => m.StaffManagerIncidentsComponent,
+          ),
       },
       {
         path: 'incidents/:id',
         loadComponent: () =>
-          import('./features/staff-manager/staff-manager-incident-detail.page').then((m) => m.StaffManagerIncidentDetailComponent),
+          import('./features/staff-manager/staff-manager-incident-detail.page').then(
+            (m) => m.StaffManagerIncidentDetailComponent,
+          ),
       },
       {
         path: 'sla-alert',
         loadComponent: () =>
-          import('./features/staff-manager/staff-manager-sla-alert.page').then((m) => m.StaffManagerSlaAlertComponent),
+          import('./features/staff-manager/staff-manager-sla-alert.page').then(
+            (m) => m.StaffManagerSlaAlertComponent,
+          ),
       },
       {
         path: 'staffs',
         loadComponent: () =>
-          import('./features/staff-manager/staff-manager-staffs.page').then((m) => m.StaffManagerStaffsComponent),
+          import('./features/staff-manager/staff-manager-staffs.page').then(
+            (m) => m.StaffManagerStaffsComponent,
+          ),
       },
       {
         path: 'profile',
         loadComponent: () =>
-          import('./features/staff-manager/staff-manager-profile.page').then((m) => m.StaffManagerProfileComponent),
+          import('./features/staff-manager/staff-manager-profile.page').then(
+            (m) => m.StaffManagerProfileComponent,
+          ),
       },
     ],
   },
   {
     path: '**',
-    loadComponent: () =>
-      import('./features/not-found/not-found.page').then((m) => m.NotFoundPage),
+    loadComponent: () => import('./features/not-found/not-found.page').then((m) => m.NotFoundPage),
   },
 ]
