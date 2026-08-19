@@ -85,8 +85,8 @@ export class UserManagementService {
     return this.http.get<PagedResult<AdminUserResponse>>(this.baseUrl, { params });
   }
 
-  createUser(request: CreateUserByAdminRequest): Observable<string> {
-    return this.http.post<string>(this.baseUrl, request);
+  createUser(request: CreateUserByAdminRequest): Observable<AdminUserResponse> {
+    return this.http.post<AdminUserResponse>(this.baseUrl, request);
   }
 
   updateUser(id: string, request: UpdateUserByAdminRequest): Observable<AdminUserResponse> {

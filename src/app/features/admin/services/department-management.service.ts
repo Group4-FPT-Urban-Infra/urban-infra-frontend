@@ -97,4 +97,10 @@ export class DepartmentManagementService {
   assignMember(id: number, request: AssignDepartmentMemberRequest): Observable<DepartmentMemberResponse> {
     return this.http.post<DepartmentMemberResponse>(`${this.baseUrl}/${id}/members`, request);
   }
+
+  removeMember(id: number, userId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}/members`, {
+      params: new HttpParams().set('userId', userId)
+    });
+  }
 }

@@ -321,9 +321,8 @@ export class SlasManagementPage implements OnInit {
       this.totalItems.set(res.totalCount);
     });
 
-    this.slaService.getIssueTypes().subscribe((res: any) => {
-      const items = res?.data?.items || [];
-      const childTypes = items.filter((t: any) => t.parentIssueTypeId != null);
+    this.slaService.getIssueTypes().subscribe(items => {
+      const childTypes = items.filter(t => t.parentIssueTypeId != null);
       this.issueTypes.set(childTypes);
     });
     this.slaService.getIssuePriorities().subscribe(res => this.issuePriorities.set(res));
