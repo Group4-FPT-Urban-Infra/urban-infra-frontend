@@ -433,6 +433,20 @@
             class="rounded-xl border px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2"
             style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface); --tw-ring-color:var(--color-primary)"/>
         </div>
+        <!-- Parent department -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wider" style="color:var(--color-on-surface-variant)">Parent Department</label>
+          <select [(ngModel)]="modalForm.parentDepartmentId"
+            class="rounded-xl border px-4 py-2.5 text-sm focus:outline-none appearance-none"
+            style="background-color:var(--color-surface-container-low); border-color:var(--color-outline-variant); color:var(--color-on-surface)">
+            <option [ngValue]="null">-- Root Department --</option>
+            @for (department of departments; track department.id) {
+              @if (!editingDept || department.id !== editingDept.id) {
+                <option [ngValue]="department.id">{{ department.name }}</option>
+              }
+            }
+          </select>
+        </div>
         <!-- Head of Department (Edit only) -->
         @if (editingDept) {
           <div class="flex flex-col gap-1.5">
@@ -446,7 +460,11 @@
               }
             </select>
             @if (hasExistingHead) {
-              <span class="text-[11px]" style="color:var(--color-outline)">Manager already assigned. Remove them first to change.</span>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-[11px]" style="color:var(--color-outline)">Manager already assigned.</span>
+                <button type="button" (click)="removeDepartmentHead()" [disabled]="savingModal()"
+                  class="text-xs font-semibold disabled:opacity-50" style="color:var(--color-error)">Remove head</button>
+              </div>
             }
           </div>
         }

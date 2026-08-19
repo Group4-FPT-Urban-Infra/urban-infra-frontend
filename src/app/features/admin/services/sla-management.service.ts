@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
 export interface SlaPolicyResponse {
@@ -56,6 +57,12 @@ export interface PagedResult<T> {
   hasPreviousPage: boolean;
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data?: T;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -91,7 +98,9 @@ export class SlaManagementService {
   }
 
   getIssueTypes(): Observable<IssueTypeLookupResponse[]> {
-    return this.http.get<IssueTypeLookupResponse[]>(`${this.apiUrl}/issue-types`);
+    return this.http
+      .get<ApiResponse<IssueTypeLookupResponse[]>>(`${this.apiUrl}/issue-types/lookup`)
+      .pipe(map(response => response.data ?? []));
   }
 
   getIssuePriorities(): Observable<IssuePriorityResponse[]> {

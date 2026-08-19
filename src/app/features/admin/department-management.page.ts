@@ -31,6 +31,7 @@ interface Department {
   originalEmail?: string
   originalPhone?: string
   originalAddress?: string
+  originalParentDepartmentId?: number
   routingRules: RoutingRuleResponse[]
 }
 
@@ -73,6 +74,7 @@ export class DepartmentManagementPage implements OnInit {
   availableStaff: DepartmentMemberResponse[] = []
   hasExistingHead = false
   modalForm = {
+    parentDepartmentId: null as number | null,
     departmentCode: '',
     name: '',
     headUserId: '',
@@ -189,6 +191,7 @@ export class DepartmentManagementPage implements OnInit {
       originalEmail:  d.email,
       originalPhone:  d.phone,
       originalAddress: d.address,
+      originalParentDepartmentId: d.parentDepartmentId,
       routingRules:   deptRules
     }
   }
@@ -235,7 +238,7 @@ export class DepartmentManagementPage implements OnInit {
     this.editingDept    = null
     this.availableStaff = []
     this.hasExistingHead = false
-    this.modalForm = { departmentCode: '', name: '', headUserId: '', email: '', phone: '', address: '', status: 'Active' }
+    this.modalForm = { parentDepartmentId: null, departmentCode: '', name: '', headUserId: '', email: '', phone: '', address: '', status: 'Active' }
     this.modalError.set('')
     this.showModal.set(true)
   }
@@ -245,6 +248,7 @@ export class DepartmentManagementPage implements OnInit {
     this.availableStaff = []
     this.hasExistingHead = false
     this.modalForm = {
+      parentDepartmentId: dept.originalParentDepartmentId ?? null,
       departmentCode: dept.originalCode || dept.name,
       name:           dept.originalName || '',
       headUserId:     '',
@@ -280,6 +284,7 @@ export class DepartmentManagementPage implements OnInit {
     }
 
     const request: CreateDepartmentRequest = {
+      parentDepartmentId: this.modalForm.parentDepartmentId ?? undefined,
       departmentName: this.modalForm.name,
       departmentCode: this.modalForm.departmentCode,
       email:          this.modalForm.email  || undefined,
@@ -317,6 +322,27 @@ export class DepartmentManagementPage implements OnInit {
         error: (err) => { this.savingModal.set(false); this.modalError.set(err?.error?.message ?? 'Error creating department') },
       })
     }
+  }
+
+  removeDepartmentHead(): void {
+    if (!this.editingDept || !this.modalForm.headUserId) return
+
+    this.savingModal.set(true)
+    this.modalError.set('')
+    this.deptService.removeMember(this.editingDept.id, this.modalForm.headUserId).subscribe({
+      next: () => {
+        this.savingModal.set(false)
+        this.modalForm.headUserId = ''
+        this.hasExistingHead = false
+        this.availableStaff = this.availableStaff.filter(member => member.isActive)
+        this.loadDepartments()
+        this.showToast('Department head removed.', true)
+      },
+      error: (err) => {
+        this.savingModal.set(false)
+        this.modalError.set(err?.error?.message ?? 'Error removing department head')
+      },
+    })
   }
 
   // ── Delete ──
