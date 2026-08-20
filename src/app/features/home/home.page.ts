@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common'
 import { Router } from '@angular/router'
 import { HomeStore } from './home.store'
 import { NearbyIssueResponse } from '../../core/services/dashboard.service'
+import { formatTimeAgo } from '../../core/utils/date.utils'
 
 @Component({
   selector: 'app-home-page',
@@ -816,18 +817,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   formatTimeAgo(date: string): string {
-    const d = new Date(date)
-    const now = new Date()
-    const diffMs = now.getTime() - d.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffHours < 24) return `${diffHours} hr ago`
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-    return d.toLocaleDateString()
+    return formatTimeAgo(date)
   }
 
   closeModal(event: Event): void {

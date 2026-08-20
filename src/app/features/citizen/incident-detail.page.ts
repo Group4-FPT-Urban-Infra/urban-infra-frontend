@@ -10,6 +10,7 @@ import type {
   IssueDetailResponse,
   IssueTimelineItemResponse,
 } from '../../core/services/dashboard.service'
+import { parseUtcDate, getSlaCountdownInfo, formatLocalDateTime, formatLocalDate } from '../../core/utils/date.utils'
 
 @Component({
   selector: 'app-incident-detail',
@@ -519,14 +520,7 @@ export class IncidentDetailComponent implements OnInit {
   }
 
   formatDate(date: string): string {
-    const d = new Date(date)
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    return formatLocalDateTime(date)
   }
 
   formatSlaTime(minutes: number): string {
@@ -543,19 +537,9 @@ export class IncidentDetailComponent implements OnInit {
 
   getSlaRemainingText(): string {
     const current = this.issue()
-    if (!current?.sla) return ''
-    const now = new Date()
-    const dueDate = new Date(current.sla.resolutionDueAt)
-    const diff = dueDate.getTime() - now.getTime()
-    if (diff <= 0) return 'Overdue'
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    if (hours > 24) {
-      const days = Math.floor(hours / 24)
-      return `${days}d remaining`
-    }
-    if (hours > 0) return `${hours}h ${minutes}m remaining`
-    return `${minutes}m remaining`
+    if (!current?.sla?.resolutionDueAt) return ''
+    const countdown = getSlaCountdownInfo(current.sla.resolutionDueAt)
+    return countdown.isBreached ? 'Overdue' : `${countdown.text} remaining`
   }
 
   formatTimeAgo(date: string): string {

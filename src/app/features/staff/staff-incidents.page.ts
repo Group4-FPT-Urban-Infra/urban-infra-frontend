@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import { StaffService, StaffIncidentResponse, LookupItemResponse } from './staff.service'
 import { DashboardService } from '../../core/services/dashboard.service'
+import { formatLocalDateTime, formatLocalDate, formatTimeAgo } from '../../core/utils/date.utils'
 
 @Component({
   selector: 'app-staff-incidents',
@@ -473,13 +474,7 @@ export class StaffIncidentsComponent implements OnInit {
   }
 
   formatDateTime(dateStr: string): string {
-    const date = new Date(dateStr)
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const year = date.getFullYear()
-    const hours = date.getHours().toString().padStart(2, '0')
-    const minutes = date.getMinutes().toString().padStart(2, '0')
-    return `${hours}:${minutes} ${day}/${month}/${year}`
+    return formatLocalDateTime(dateStr)
   }
 
   getTypeBgClass(typeCode: string): string {

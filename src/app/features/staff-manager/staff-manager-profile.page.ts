@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { RouterLink } from '@angular/router'
 import { AuthService, AuthUserProfile } from '../../core/auth/auth.service'
+import { formatLocalDate, parseUtcDate } from '../../core/utils/date.utils'
 
 @Component({
   selector: 'app-staff-manager-profile',
@@ -194,7 +195,6 @@ export class StaffManagerProfileComponent implements OnInit {
   }
 
   formatDate(isoString: string): string {
-    const date = new Date(isoString)
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    return formatLocalDate(isoString, 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   }
 }

@@ -4,6 +4,7 @@ import { Router } from '@angular/router'
 import { AdminDashboardService } from './services/admin-dashboard.service'
 import { PagedResponse, IssueSummaryResponse } from '../../core/services/dashboard.service'
 import { AdminSidebarComponent } from './admin-sidebar.component'
+import { formatLocalDate } from '../../core/utils/date.utils'
 
 interface ReportRow {
   id: string
@@ -239,7 +240,7 @@ export class AdminIncidentsPage implements OnInit {
         priority: `${priorityEmoji} ${issue.priority?.name || 'N/A'}`,
         priorityColor,
         isAssigned: issue.isAssigned || false,
-        createdAt: new Date(issue.reportedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        createdAt: formatLocalDate(issue.reportedAt, 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       }
     })
   })

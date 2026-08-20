@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core'
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http'
 import { Observable, map } from 'rxjs'
 import { env } from '../../core/config/env'
+import { formatTimeAgo, parseUtcDate, formatLocalDate, formatLocalDateTime, getSlaCountdownInfo } from '../../core/utils/date.utils'
 
 export interface StaffDashboardSummaryResponse {
   departmentId: number
@@ -248,18 +249,15 @@ export class StaffService {
   }
 
   formatTimeAgo(date: Date | string): string {
-    const d = typeof date === 'string' ? new Date(date) : date
-    const now = new Date()
-    const diffMs = now.getTime() - d.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
+    return formatTimeAgo(date)
+  }
 
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    return d.toLocaleDateString()
+  formatDate(date: Date | string | null | undefined): string {
+    return formatLocalDate(date)
+  }
+
+  formatDateTime(date: Date | string | null | undefined): string {
+    return formatLocalDateTime(date)
   }
 
   getPriorityClass(priorityCode: string): string {

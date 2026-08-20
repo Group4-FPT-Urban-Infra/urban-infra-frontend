@@ -1,4 +1,4 @@
-﻿import {
+import {
   Component,
   OnInit,
   computed,
@@ -28,6 +28,7 @@ import {
   AuditLogResponse,
 } from './services/admin-dashboard.service'
 import { IssueSummaryResponse, PagedResponse } from '../../core/services/dashboard.service'
+import { formatTimeAgo, formatLocalDate, formatLocalDateTime, parseUtcDate } from '../../core/utils/date.utils'
 
 interface KpiCard {
   label: string
@@ -1144,17 +1145,6 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
   readonly mappedActivities = computed((): ActivityItem[] => {
     const data = this.activityData()
 
-    const getTimeAgo = (dateStr: string) => {
-      const diffMs = new Date().getTime() - new Date(dateStr).getTime()
-      const diffMins = Math.floor(diffMs / 60000)
-      const diffHours = Math.floor(diffMins / 60)
-      const diffDays = Math.floor(diffHours / 24)
-      if (diffMins < 1) return 'Just now'
-      if (diffMins < 60) return `${diffMins} mins ago`
-      if (diffHours < 24) return `${diffHours} hrs ago`
-      return `${diffDays} days ago`
-    }
-
     return data.map((log, index) => {
       let dotColor = 'var(--color-primary)'
       let ringColor = 'var(--color-primary-fixed)'
@@ -1176,7 +1166,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
       return {
         title: log.title,
         subtitle: log.subtitle,
-        time: getTimeAgo(log.timestamp),
+        time: formatTimeAgo(log.timestamp),
         dotColor,
         ringColor,
         isLast: index === data.length - 1,
@@ -1261,7 +1251,7 @@ export class AdminDashboardPage implements OnInit, AfterViewInit, OnDestroy {
         priority: `${priorityEmoji} ${issue.priority?.name || 'N/A'}`,
         priorityColor,
         assignedTo: 'N/A', // Since IssueSummaryResponse does not have AssignedTo, map to N/A
-        createdAt: new Date(issue.reportedAt).toLocaleDateString('en-GB', {
+        createdAt: formatLocalDate(issue.reportedAt, 'en-GB', {
           day: '2-digit',
           month: 'short',
           year: 'numeric',

@@ -18,6 +18,7 @@ import {
   DepartmentManagerIssueDetail,
   DepartmentManagerIssueListRequest,
 } from '../../core/services/department-manager.service'
+import { formatTimeAgo, formatLocalDate, formatLocalDateTime, parseUtcDate } from '../../core/utils/date.utils'
 import { DashboardService } from '../../core/services/dashboard.service'
 import { IssueTypeLookup, IssueStatusLookup } from '../../core/services/dashboard.service'
 
@@ -637,18 +638,7 @@ export class DepartmentManagerMapComponent implements AfterViewInit, OnDestroy, 
   }
 
   formatDate(date: string): string {
-    const d = new Date(date)
-    const now = new Date()
-    const diffMs = now.getTime() - d.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffHours < 24) return `${diffHours} hr ago`
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-    return d.toLocaleDateString()
+    return formatTimeAgo(date)
   }
 
   getStatusColor(status?: string): string {

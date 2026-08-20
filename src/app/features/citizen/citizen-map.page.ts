@@ -15,6 +15,7 @@ import * as L from 'leaflet'
 import { DashboardService } from '../../core/services/dashboard.service'
 import type { NearbyIssueResponse, IssueTypeLookup, IssueStatusLookup, IssuePriorityLookup } from '../../core/services/dashboard.service'
 import { environment } from '../../../environments/environment'
+import { formatTimeAgo, parseUtcDate, formatLocalDate, formatLocalDateTime } from '../../core/utils/date.utils'
 
 // For backward compatibility
 const API_URL = environment.apiBaseUrl
@@ -1066,18 +1067,7 @@ export class CitizenMapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   formatTimeAgo(date: string): string {
-    const d = new Date(date)
-    const now = new Date()
-    const diffMs = now.getTime() - d.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffHours < 24) return `${diffHours} hr ago`
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-    return d.toLocaleDateString()
+    return formatTimeAgo(date)
   }
 
   formatDistance(meters: number): string {

@@ -5,6 +5,7 @@ import { AdminSidebarComponent } from './admin-sidebar.component';
 import { UserManagementService, AdminUserListRequest, AdminUserResponse, CreateUserByAdminRequest, UpdateUserByAdminRequest, DepartmentResponse } from './services/user-management.service';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { switchMap } from 'rxjs/operators';
+import { formatLocalDateTime, parseUtcDate } from '../../core/utils/date.utils';
 
 interface UserRow {
   id: string;
@@ -433,7 +434,7 @@ export class UserManagementPage implements OnInit {
         status,
         statusBg,
         statusColor,
-        lastLogin: this.datePipe.transform(u.createdAtUtc, 'medium') || 'Never',
+        lastLogin: formatLocalDateTime(u.createdAtUtc) || 'Never',
         isActive: u.isActive
       };
     });

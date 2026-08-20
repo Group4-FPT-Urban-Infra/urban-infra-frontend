@@ -18,6 +18,7 @@ import {
   StaffActivityResponse,
   StaffMapIssueResponse,
 } from './staff.service'
+import { parseUtcDate, getSlaCountdownInfo, formatTimeAgo } from '../../core/utils/date.utils'
 import * as L from 'leaflet'
 
 // Fix Leaflet default icon paths
@@ -798,19 +799,8 @@ export class StaffHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   formatSlaDue(dateStr: string): string {
-    const due = new Date(dateStr)
-    const now = new Date()
-    const diffMs = due.getTime() - now.getTime()
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffMs < 0) {
-      const absHours = Math.abs(diffHours)
-      if (absHours >= 24) return `${Math.abs(diffDays)}d overdue`
-      return `${absHours}h overdue`
-    }
-    if (diffHours >= 24) return `in ${diffDays}d`
-    if (diffHours > 0) return `in ${diffHours}h`
-    return 'due now'
+    if (!dateStr) return 'N/A'
+    const info = getSlaCountdownInfo(dateStr)
+    return info.text
   }
 }
