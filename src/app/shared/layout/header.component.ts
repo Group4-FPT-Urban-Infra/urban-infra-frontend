@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, inject, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { Router, RouterLink, RouterLinkActive } from '@angular/router'
+import { Router, RouterLink } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
 import { TranslateService } from '@ngx-translate/core'
 import { NotificationService } from '../../core/services/notification.service'
@@ -9,7 +9,7 @@ import { NotificationItem } from '../../core/models/notification.model'
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink],
   styles: [
     `
       .nav-link-active {
@@ -53,132 +53,6 @@ import { NotificationItem } from '../../core/models/notification.model'
             class="w-56 border-none bg-transparent text-sm text-[var(--color-on-surface)] placeholder:text-[var(--color-outline)] focus:outline-none focus:ring-0"
           />
         </div>
-      </div>
-
-      <!-- Center: Nav links (desktop) - Dashboard Tabs -->
-      <div class="hidden items-center gap-6 md:flex">
-
-        @switch (getUserRole()) {
-          @case ('DepartmentStaff') {
-            <!-- Staff Dashboard -->
-            <a
-              routerLink="/staff/dashboard"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Staff Dashboard
-            </a>
-            <a
-              routerLink="/staff/map"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Map View
-            </a>
-            <a
-              routerLink="/staff/incidents"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Incidents
-            </a>
-          }
-          @case ('DepartmentManager') {
-            <!-- Staff Manager Dashboard -->
-            <a
-              routerLink="/staff-manager/dashboard"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Manager Dashboard
-            </a>
-            <a
-              routerLink="/staff-manager/map"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Map View
-            </a>
-            <a
-              routerLink="/staff-manager/incidents"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Incidents
-            </a>
-            <a
-              routerLink="/staff-manager/sla-alert"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              SLA & Alert
-            </a>
-            <a
-              routerLink="/staff-manager/staffs"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Staffs
-            </a>
-          }
-          @case ('Admin') {
-            <!-- Admin Dashboard -->
-            <a
-              routerLink="/admin"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Admin Dashboard
-            </a>
-          }
-          @default {
-            @if (store.isAuthenticated()) {
-              <a
-                routerLink="/citizen/dashboard"
-                routerLinkActive="nav-link-active"
-                [routerLinkActiveOptions]="{ exact: true }"
-                class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-              >
-                Dashboard
-              </a>
-            }
-            <a
-              [routerLink]="store.isAuthenticated() ? '/citizen/map' : '/map'"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Map View
-            </a>
-            <a
-              [routerLink]="store.isAuthenticated() ? '/citizen/reports' : '/incidents'"
-              routerLinkActive="nav-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-            >
-              Incidents
-            </a>
-          }
-        }
-
-        @if (store.isAuthenticated()) {
-          <a
-            routerLink="/incident-reporting"
-            routerLinkActive="nav-link-active"
-            class="pb-1 text-sm text-[var(--color-on-surface-variant)] transition-colors hover:text-[var(--color-on-surface)]"
-          >
-            Report Issue
-          </a>
-        }
       </div>
 
       <!-- Right: Actions + Avatar -->
@@ -275,48 +149,89 @@ import { NotificationItem } from '../../core/models/notification.model'
         </div>
         }
 
-        <!-- Language Selector -->
-        <select
-          aria-label="Language"
-          [value]="translate.getCurrentLang()"
-          (change)="onLocaleChange($event)"
-          class="hidden h-8 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] px-2 text-xs font-medium text-[var(--color-on-surface)] sm:block"
-        >
-          @for (l of locales; track l) {
-            <option [value]="l">{{ l.toUpperCase() }}</option>
-          }
-        </select>
+        <!-- Role Switcher (Admin only) -->
+        @if (store.isAuthenticated() && isAdminOnly()) {
+          <div class="relative">
+            <select
+              aria-label="Switch Role"
+              [value]="getCurrentDisplayRole()"
+              (change)="onRoleChange($event)"
+              class="h-8 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] px-2 text-xs font-medium text-[var(--color-on-surface)] sm:block cursor-pointer"
+            >
+              @for (role of getUserRoles(); track role) {
+                <option [value]="role">{{ getRoleDisplayName(role) }}</option>
+              }
+            </select>
+          </div>
+        }
 
-        <!-- Avatar + Logout -->
-        <div class="flex items-center gap-2 border-l border-[var(--color-outline-variant)] pl-3 ml-1">
+        <!-- Avatar + User Menu Dropdown -->
+        <div class="flex items-center gap-2 border-l border-[var(--color-outline-variant)] pl-3 ml-1 relative">
           @if (store.isAuthenticated()) {
-            <div
-              class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-[var(--color-outline-variant)]"
+            <!-- Avatar Button -->
+            <button
+              (click)="toggleUserMenu()"
+              class="flex items-center gap-2 rounded-lg p-1 hover:bg-[var(--color-surface-variant)]/50 transition-colors focus:outline-none"
+              type="button"
+              title="User menu"
             >
               <div
-                class="flex h-full w-full items-center justify-center bg-[var(--color-primary-fixed)] text-xs font-bold text-[var(--color-primary)]"
+                class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-[var(--color-outline-variant)]"
               >
-                {{ getUserInitials() }}
+                <div
+                  class="flex h-full w-full items-center justify-center bg-[var(--color-primary-fixed)] text-xs font-bold text-[var(--color-primary)]"
+                >
+                  {{ getUserInitials() }}
+                </div>
               </div>
-            </div>
-
-            <div class="hidden text-left lg:block">
-              <p class="text-xs font-semibold text-[var(--color-on-surface)]">
-                {{ store.user()?.fullName || 'Admin User' }}
-              </p>
-            </div>
-
-            <!-- Logout -->
-            <button
-              (click)="logout()"
-              title="Logout"
-              class="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--color-outline-variant)] px-2 text-xs text-[var(--color-on-surface-variant)] transition-colors hover:border-[var(--color-error)] hover:bg-[var(--color-error-container)] hover:text-[var(--color-on-error-container)]"
-            >
-              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">logout</span>
-              <span class="hidden sm:inline">Sign out</span>
+              <span class="text-sm font-medium text-[var(--color-on-surface)] hidden md:block">
+                {{ store.user()?.fullName || 'User' }}
+              </span>
+              <span class="material-symbols-outlined text-[20px] text-[var(--color-on-surface-variant)]">expand_more</span>
             </button>
+
+            <!-- User Menu Dropdown -->
+            @if (showUserMenu()) {
+              <div
+                class="absolute right-0 top-full mt-2 min-w-full w-max rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden"
+              >
+                <!-- User Info Header -->
+                <div class="border-b border-[var(--color-outline-variant)] px-4 py-3 bg-[var(--color-surface-container)]">
+                  <p class="text-sm font-semibold text-[var(--color-on-surface)]">
+                    {{ store.user()?.fullName || 'User' }}
+                  </p>
+                  <p class="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
+                    {{ getCurrentDisplayRoleName() }}
+                  </p>
+                </div>
+
+                <!-- Menu Options -->
+                <div class="py-1">
+                  <button
+                    (click)="goToManagementDashboard()"
+                    class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[var(--color-on-surface)] hover:bg-[var(--color-surface-variant)]/50 transition-colors"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                    Trang quản lý
+                  </button>
+                </div>
+
+                <!-- Logout -->
+                <div class="border-t border-[var(--color-outline-variant)] py-1">
+                  <button
+                    (click)="logout()"
+                    class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[var(--color-error)] hover:bg-[var(--color-error-container)]/30 transition-colors"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-[20px]">logout</span>
+                    Đăng xuất
+                  </button>
+                </div>
+              </div>
+            }
           } @else {
-            <!-- Login/Register for guests -->
+            <!-- Login for guests -->
             <a
               routerLink="/login"
               class="inline-flex h-8 items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 text-xs font-medium text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary)]/90"
@@ -352,16 +267,110 @@ export class HeaderComponent implements OnInit {
   protected readonly locales = ['en', 'vi']
   readonly unreadNotifications = signal<NotificationItem[]>([])
   readonly showDropdown = signal<boolean>(false)
+  readonly showUserMenu = signal<boolean>(false)
+  readonly currentDisplayRole = signal<string>('')
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event): void {
     if (!this.elementRef.nativeElement.contains(event.target)) {
       this.showDropdown.set(false)
+      this.showUserMenu.set(false)
     }
   }
 
   ngOnInit(): void {
-    if (this.store.isAuthenticated()) this.loadUnreadNotifications()
+    if (this.store.isAuthenticated()) {
+      this.loadUnreadNotifications()
+      this.initDisplayRole()
+    }
+  }
+
+  private initDisplayRole(): void {
+    const user = this.store.user()
+    if (!user) return
+
+    // Check roles in priority order: Admin > DepartmentManager > DepartmentStaff > Citizen
+    if (user.roles.includes('Admin')) {
+      this.currentDisplayRole.set('Admin')
+    } else if (user.roles.includes('DepartmentManager')) {
+      this.currentDisplayRole.set('DepartmentManager')
+    } else if (user.roles.includes('DepartmentStaff')) {
+      this.currentDisplayRole.set('DepartmentStaff')
+    } else {
+      this.currentDisplayRole.set('Citizen')
+    }
+  }
+
+  toggleUserMenu(): void {
+    this.showUserMenu.update((v) => !v)
+  }
+
+  hasMultipleRoles(): boolean {
+    const user = this.store.user()
+    if (!user) return false
+    return user.roles.length > 1
+  }
+
+  isAdminOnly(): boolean {
+    const user = this.store.user()
+    if (!user) return false
+    // Show role switcher only for Admin users (who have Admin role, possibly with Citizen)
+    return user.roles.includes('Admin') && user.roles.length <= 2
+  }
+
+  getUserRoles(): string[] {
+    const user = this.store.user()
+    if (!user) return []
+
+    // Return roles in priority order
+    const priorityOrder = ['Admin', 'DepartmentManager', 'DepartmentStaff', 'Citizen']
+    return priorityOrder.filter(role => user.roles.includes(role))
+  }
+
+  getCurrentDisplayRole(): string {
+    return this.currentDisplayRole()
+  }
+
+  getRoleDisplayName(role: string): string {
+    const roleNames: Record<string, string> = {
+      'Admin': 'Quản trị viên',
+      'DepartmentManager': 'Trưởng phòng',
+      'DepartmentStaff': 'Nhân viên',
+      'Citizen': 'Công dân'
+    }
+    return roleNames[role] || role
+  }
+
+  getCurrentDisplayRoleName(): string {
+    return this.getRoleDisplayName(this.currentDisplayRole())
+  }
+
+  onRoleChange(event: Event): void {
+    const newRole = (event.target as HTMLSelectElement).value
+    this.currentDisplayRole.set(newRole)
+    // Navigate to appropriate dashboard based on selected role
+    this.goToManagementDashboard()
+  }
+
+  goToManagementDashboard(): void {
+    this.showUserMenu.set(false)
+    const role = this.currentDisplayRole()
+
+    switch (role) {
+      case 'Admin':
+        void this.router.navigate(['/admin'])
+        break
+      case 'DepartmentManager':
+        void this.router.navigate(['/staff-manager/dashboard'])
+        break
+      case 'DepartmentStaff':
+        void this.router.navigate(['/staff/dashboard'])
+        break
+      case 'Citizen':
+      default:
+        void this.router.navigate(['/citizen/dashboard'])
+        break
+    }
   }
 
   loadUnreadNotifications(): void {

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
-import { RouterLink } from '@angular/router'
+import { Router, RouterLink } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
 import { DepartmentManagerService } from '../../core/services/department-manager.service'
 import {
@@ -190,16 +190,16 @@ import {
                 </thead>
                 <tbody class="text-[14px] text-[var(--color-on-surface)]">
                   @for (req of reRouteRequests(); track req.id) {
-                    <tr class="border-b border-[var(--color-outline-variant)]/20 transition-colors hover:bg-[var(--color-surface-container-lowest)]">
-                      <td class="p-4 font-medium text-[var(--color-primary)]"><a [routerLink]="['/staff-manager/incidents', req.issueId]">#{{ req.issueId }}</a></td>
+                    <tr class="cursor-pointer border-b border-[var(--color-outline-variant)]/20 transition-colors hover:bg-[var(--color-surface-container-lowest)]" (click)="goToIssueDetail(req.issueId, $event)">
+                      <td class="p-4 font-medium text-[var(--color-primary)]">#{{ req.issueId }}</td>
                       <td class="p-4">{{ req.currentDepartmentName }}</td>
-                      <td class="p-4 text-[12px] text-[var(--color-on-surface-variant)] max-w-[200px] truncate" [title]="req.note || ''">{{ req.note || '-' }}</td>
+                      <td class="max-w-[200px] truncate p-4 text-[12px] text-[var(--color-on-surface-variant)]" [title]="req.note || ''">{{ req.note || '-' }}</td>
                       <td class="p-4 text-[var(--color-on-surface-variant)]">{{ formatDate(req.requestedAt) }}</td>
-                      <td class="p-4 text-right flex justify-end gap-2">
-                        <button (click)="acceptReRoute(req.id)" class="text-[12px] font-medium text-white bg-[var(--color-primary)] px-3 py-1.5 rounded transition-colors hover:bg-[var(--color-primary-container)] hover:text-[var(--color-on-primary-container)]">
+                      <td class="flex justify-end gap-2 p-4 text-right" (click)="$event.stopPropagation()">
+                        <button (click)="acceptReRoute(req.id)" class="rounded bg-[var(--color-primary)] px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-[var(--color-primary-container)] hover:text-[var(--color-on-primary-container)]">
                           Accept
                         </button>
-                        <button (click)="rejectReRoute(req.id)" class="text-[12px] font-medium text-[var(--color-error)] border border-[var(--color-error)] px-3 py-1.5 rounded transition-colors hover:bg-[var(--color-error-container)]">
+                        <button (click)="rejectReRoute(req.id)" class="rounded border border-[var(--color-error)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-error)] transition-colors hover:bg-[var(--color-error-container)]">
                           Reject
                         </button>
                       </td>
@@ -295,6 +295,7 @@ import {
 export class StaffManagerHomeComponent implements OnInit {
   protected readonly authStore = inject(AuthStore)
   private readonly dmService = inject(DepartmentManagerService)
+  private readonly router = inject(Router)
 
   stats = signal<DepartmentManagerDashboardStats | null>(null)
   workload = signal<TeamWorkloadItem[]>([])
@@ -383,6 +384,11 @@ export class StaffManagerHomeComponent implements OnInit {
         this.isAssigning.set(false)
       },
     })
+  }
+
+  goToIssueDetail(issueId: number, event: MouseEvent): void {
+    event.stopPropagation()
+    void this.router.navigate(['/staff-manager/incidents', issueId])
   }
 
   formatDate(date: string): string {

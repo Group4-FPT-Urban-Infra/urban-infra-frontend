@@ -318,7 +318,9 @@ export class CitizenHomeComponent implements OnInit {
         next: (reports) => {
           this.myReports.set(reports)
           const resolved = reports.filter((item) => item.issueCount > 0 && item.resolvedIssueCount === item.issueCount).length
-          const helpfulnessScore = Math.min(100, reports.reduce((sum, item) => sum + item.upvoteCount, 0))
+          const totalIssues = reports.reduce((sum, item) => sum + item.issueCount, 0)
+          const totalResolved = reports.reduce((sum, item) => sum + item.resolvedIssueCount, 0)
+          const helpfulnessScore = totalIssues > 0 ? Math.round((totalResolved / totalIssues) * 100) : 0
           this.myStats.set({ totalReports: reports.length, resolved, helpfulnessScore })
           this.dashboardService.getMyReportUpdates(5).subscribe({
             next: (updates) => this.recentUpdates.set(updates), error: () => this.recentUpdates.set([]),
