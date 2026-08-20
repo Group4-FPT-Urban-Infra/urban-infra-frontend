@@ -190,18 +190,17 @@ import {
                     <span
                       class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium"
                       [style.background-color]="getIssueStatusColor(issue.issueStatus) + '20'"
-                      [style.color]="getIssueStatusColor(issue.issueStatus)"
                     >
-                      {{ issue.issueStatus }}
+                      {{ issue.statusName }}
                     </span>
                   </td>
                   <td class="hidden p-4 md:table-cell">
                     <span
                       class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium"
-                      [style.background-color]="getSlaStatusColor(issue.slaStatus) + '20'"
-                      [style.color]="getSlaStatusColor(issue.slaStatus)"
+                      [style.background-color]="getIssueStatusColor(issue.issueStatus) + '20'"
+                      [style.color]="getIssueStatusColor(issue.issueStatus)"
                     >
-                      {{ formatSlaStatus(issue.slaStatus) }}
+                      {{ issue.issueStatus }}
                     </span>
                   </td>
                   <td class="hidden p-4 lg:table-cell">
@@ -530,13 +529,20 @@ export class StaffManagerIncidentsComponent implements OnInit {
 
   getIssueStatusColor(status: string): string {
     switch (status) {
-      case 'RESOLVED': return '#2196F3'
-      case 'CLOSED': return '#9E9E9E'
-      case 'BREACHED': return '#F44336'
-      case 'RESPONSE_BREACHED': return '#FF5722'
-      case 'AT_RISK': return '#FF9800'
-      case 'ACTIVE': return '#4CAF50'
-      default: return '#9E9E9E'
+      case 'RESOLVED':
+        return '#2196F3'
+      case 'CLOSED':
+        return '#9E9E9E'
+      case 'BREACHED':
+        return '#F44336'
+      case 'RESPONSE_BREACHED':
+        return '#FF5722'
+      case 'AT_RISK':
+        return '#FF9800'
+      case 'ACTIVE':
+        return '#4CAF50'
+      default:
+        return '#9E9E9E'
     }
   }
 

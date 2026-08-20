@@ -87,7 +87,22 @@ export interface IssueDetailResponse extends IssueSummaryResponse {
   resolvedAt?: string
   closedAt?: string
   updatedAt: string
+  sla?: IssueSlaResponse
   attachments: IssueAttachmentResponse[]
+}
+
+export interface IssueSlaResponse {
+  id: number
+  issueId: number
+  slaPolicyId?: string
+  firstResponseMinutes: number
+  resolutionMinutes: number
+  firstResponseDueAt?: string
+  resolutionDueAt: string
+  firstRespondedAt?: string
+  resolvedAt?: string
+  isFirstResponseBreached: boolean
+  isResolutionBreached: boolean
 }
 
 export interface IssueAttachmentResponse {

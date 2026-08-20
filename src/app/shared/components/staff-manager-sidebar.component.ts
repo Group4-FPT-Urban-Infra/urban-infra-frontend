@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core'
+import { Component, OnDestroy, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { RouterLink, RouterLinkActive } from '@angular/router'
+import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router'
+import { filter } from 'rxjs/operators'
 import { AuthStore } from '../../core/auth/auth.store'
 
 @Component({
@@ -116,29 +117,21 @@ import { AuthStore } from '../../core/auth/auth.store'
       <div
         class="mt-auto flex flex-col gap-1 border-t border-[var(--color-outline-variant)] px-2 pt-4 pb-4"
       >
-        <a
-          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
-          href="#"
-        >
-          <span class="material-symbols-outlined">contact_support</span>
-          Support
-        </a>
-
-        <a
-          routerLink="/staff-manager/profile"
-          routerLinkActive="bg-[var(--color-secondary-container)] text-[var(--color-on-secondary-container)]"
-          [routerLinkActiveOptions]="{ exact: true }"
-          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
-        >
-          <div class="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary-container)]">
-            @if (authStore.user(); as user) {
-              <span class="text-[10px] font-bold text-[var(--color-on-primary-container)]">{{ getInitials(user.fullName) }}</span>
-            }
+        <!-- Role Switcher (for multi-role users) -->
+        @if (authStore.isAuthenticated() && hasMultipleRoles()) {
+          <div class="rounded-lg px-3 py-2">
+            <select
+              aria-label="Switch Role"
+              [value]="getCurrentDisplayRole()"
+              (change)="onRoleChange($event)"
+              class="h-8 w-full cursor-pointer rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-high)] px-2 text-xs font-medium text-[var(--color-on-surface)]"
+            >
+              @for (role of getUserRoles(); track role) {
+                <option [value]="role">{{ getRoleDisplayName(role) }}</option>
+              }
+            </select>
           </div>
-          <span class="min-w-0 flex-1 truncate text-[12px]">
-            {{ authStore.user()?.fullName ?? 'User Info' }}
-          </span>
-        </a>
+        }
 
         <a
           class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-error)] transition-all hover:bg-[var(--color-error-container)]"
@@ -257,6 +250,22 @@ import { AuthStore } from '../../core/auth/auth.store'
         <div
           class="flex flex-col gap-1 border-t border-[var(--color-outline-variant)] px-2 pt-4 pb-4"
         >
+          <!-- Role Switcher (for multi-role users) -->
+          @if (authStore.isAuthenticated() && hasMultipleRoles()) {
+            <div class="px-3 py-2">
+              <select
+                aria-label="Switch Role"
+                [value]="getCurrentDisplayRole()"
+                (change)="onRoleChange($event)"
+                class="h-8 w-full cursor-pointer rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-high)] px-2 text-xs font-medium text-[var(--color-on-surface)]"
+              >
+                @for (role of getUserRoles(); track role) {
+                  <option [value]="role">{{ getRoleDisplayName(role) }}</option>
+                }
+              </select>
+            </div>
+          }
+
           <a
             class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
             href="#"
@@ -272,9 +281,13 @@ import { AuthStore } from '../../core/auth/auth.store'
             (click)="toggleMobileMenu()"
             class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--color-on-surface-variant)] transition-all hover:bg-[var(--color-surface-container-high)]"
           >
-            <div class="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary-container)]">
+            <div
+              class="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary-container)]"
+            >
               @if (authStore.user(); as user) {
-                <span class="text-[10px] font-bold text-[var(--color-on-primary-container)]">{{ getInitials(user.fullName) }}</span>
+                <span class="text-[10px] font-bold text-[var(--color-on-primary-container)]">{{
+                  getInitials(user.fullName)
+                }}</span>
               }
             </div>
             <span class="min-w-0 flex-1 truncate text-[12px]">
@@ -314,9 +327,123 @@ import { AuthStore } from '../../core/auth/auth.store'
     `,
   ],
 })
-export class StaffManagerSidebarComponent {
+export class StaffManagerSidebarComponent implements OnInit, OnDestroy {
   protected readonly authStore = inject(AuthStore)
+  private readonly router = inject(Router)
+  private subscription: any
   mobileMenuOpen = false
+
+  currentDisplayRole = ''
+
+  ngOnInit(): void {
+    this.initDisplayRole()
+
+    // Listen to router events to update role on navigation
+    this.subscription = this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.updateRoleFromUrl()
+      })
+  }
+
+  ngOnDestroy(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe()
+    }
+  }
+
+  private updateRoleFromUrl(): void {
+    const url = this.router.url.toLowerCase()
+
+    if (url.includes('citizen')) {
+      this.currentDisplayRole = 'Citizen'
+    } else if (url.includes('/admin')) {
+      this.currentDisplayRole = 'Admin'
+    } else if (url.includes('/staff-manager') || url.includes('/department-manager')) {
+      this.currentDisplayRole = 'DepartmentManager'
+    } else if (url.includes('/staff')) {
+      this.currentDisplayRole = 'DepartmentStaff'
+    }
+  }
+
+  private initDisplayRole(): void {
+    const url = this.router.url.toLowerCase()
+
+    if (url.includes('citizen')) {
+      this.currentDisplayRole = 'Citizen'
+    } else if (url.includes('/admin')) {
+      this.currentDisplayRole = 'Admin'
+    } else if (url.includes('/staff-manager') || url.includes('/department-manager')) {
+      this.currentDisplayRole = 'DepartmentManager'
+    } else if (url.includes('/staff')) {
+      this.currentDisplayRole = 'DepartmentStaff'
+    } else {
+      const user = this.authStore.user()
+      if (!user) return
+
+      if (user.roles.includes('Admin')) {
+        this.currentDisplayRole = 'Admin'
+      } else if (user.roles.includes('DepartmentManager')) {
+        this.currentDisplayRole = 'DepartmentManager'
+      } else if (user.roles.includes('DepartmentStaff')) {
+        this.currentDisplayRole = 'DepartmentStaff'
+      } else {
+        this.currentDisplayRole = 'Citizen'
+      }
+    }
+  }
+
+  hasMultipleRoles(): boolean {
+    const user = this.authStore.user()
+    if (!user) return false
+    return user.roles.length > 1
+  }
+
+  getUserRoles(): string[] {
+    const user = this.authStore.user()
+    if (!user) return []
+
+    const priorityOrder = ['Admin', 'DepartmentManager', 'DepartmentStaff', 'Citizen']
+    return priorityOrder.filter((role) => user.roles.includes(role))
+  }
+
+  getCurrentDisplayRole(): string {
+    return this.currentDisplayRole
+  }
+
+  getRoleDisplayName(role: string): string {
+    const roleNames: Record<string, string> = {
+      Admin: 'Quản trị viên',
+      DepartmentManager: 'Trưởng phòng',
+      DepartmentStaff: 'Nhân viên',
+      Citizen: 'Công dân',
+    }
+    return roleNames[role] || role
+  }
+
+  onRoleChange(event: Event): void {
+    const newRole = (event.target as HTMLSelectElement).value
+    this.currentDisplayRole = newRole
+    this.navigateToDashboard(newRole)
+  }
+
+  private navigateToDashboard(role: string): void {
+    switch (role) {
+      case 'Admin':
+        void this.router.navigate(['/admin'])
+        break
+      case 'DepartmentManager':
+        void this.router.navigate(['/staff-manager/dashboard'])
+        break
+      case 'DepartmentStaff':
+        void this.router.navigate(['/staff/dashboard'])
+        break
+      case 'Citizen':
+      default:
+        void this.router.navigate(['/citizen/dashboard'])
+        break
+    }
+  }
 
   toggleMobileMenu(): void {
     this.mobileMenuOpen = !this.mobileMenuOpen
@@ -328,13 +455,13 @@ export class StaffManagerSidebarComponent {
 
   logout(): void {
     this.authStore.logout()
-    this.closeMobileMenu()
+    this.router.navigate(['/'])
   }
 
   getInitials(name: string): string {
     return name
       .split(' ')
-      .map(n => n[0])
+      .map((n) => n[0])
       .join('')
       .substring(0, 2)
       .toUpperCase()

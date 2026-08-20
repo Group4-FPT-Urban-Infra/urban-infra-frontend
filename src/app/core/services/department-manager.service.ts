@@ -362,11 +362,19 @@ export class DepartmentManagerService {
     return this.http.get<any[]>(`${this.baseUrl}/re-route-requests/incoming`)
   }
 
+  getPendingReRouteByIssue(issueId: number): Observable<any | null> {
+    return this.http.get<any>(`${this.baseUrl}/re-route-requests/issue/${issueId}`)
+  }
+
   acceptReRouteRequest(requestId: number): Observable<any> {
     return this.http.post(`${this.baseUrl}/re-route-requests/${requestId}/accept`, {})
   }
 
   rejectReRouteRequest(requestId: number): Observable<any> {
     return this.http.post(`${this.baseUrl}/re-route-requests/${requestId}/reject`, {})
+  }
+
+  getCurrentUserDepartment(): Observable<{ departmentId: number; departmentName: string } | null> {
+    return this.http.get<any>(`${this.baseUrl}/departments/me/department`)
   }
 }

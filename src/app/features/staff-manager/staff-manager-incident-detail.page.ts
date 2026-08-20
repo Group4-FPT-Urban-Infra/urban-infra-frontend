@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, signal, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core'
+import { AfterViewInit, Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import * as L from 'leaflet'
 import { DepartmentManagerService } from '../../core/services/department-manager.service'
 import { DashboardService } from '../../core/services/dashboard.service'
+import { AuthStore } from '../../core/auth/auth.store'
 import {
   DepartmentManagerIssueDetail,
   DepartmentManagerUpdateIssueStatusRequest,
@@ -258,6 +259,81 @@ L.Icon.Default.mergeOptions({
                       </div>
                     </div>
                   </div>
+                </div>
+              }
+
+              @if (pendingReRouteRequest()) {
+                <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50/60 p-4">
+                  <div class="mb-2 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px] text-amber-700">swap_horiz</span>
+                    <span class="text-[14px] font-semibold text-amber-900">Pending Re-route Request</span>
+                  </div>
+                  <div class="mb-3 space-y-1">
+                    @if (isIncomingReRoute()) {
+                      <div class="flex items-center gap-2 text-[13px] text-amber-800">
+                        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        <span class="font-medium">From:</span>
+                        <span>{{ pendingReRouteRequest()!.currentDepartmentName }}</span>
+                      </div>
+                    } @else {
+                      <div class="flex items-center gap-2 text-[13px] text-amber-800">
+                        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        <span class="font-medium">To:</span>
+                        <span>{{ pendingReRouteRequest()!.targetDepartmentName }}</span>
+                      </div>
+                    }
+                    @if (pendingReRouteRequest()!.note) {
+                      <div class="flex items-start gap-2 text-[13px] text-amber-800">
+                        <span class="material-symbols-outlined mt-0.5 text-[16px]">notes</span>
+                        <div class="rounded bg-amber-100/70 px-2 py-1 italic">{{ pendingReRouteRequest()!.note }}</div>
+                      </div>
+                    }
+                    <div class="flex items-center gap-2 text-[12px] text-amber-700">
+                      <span class="material-symbols-outlined text-[14px]">schedule</span>
+                      <span>{{ formatDateTime(pendingReRouteRequest()!.requestedAt) }}</span>
+                    </div>
+                  </div>
+                  @if (isIncomingReRoute()) {
+                    <div class="flex gap-2">
+                      <button
+                        (click)="acceptReRoute()"
+                        [disabled]="isAcceptingReRoute()"
+                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-[12px] font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                      >
+                        @if (isAcceptingReRoute()) {
+                          <div class="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                        } @else {
+                          <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                        }
+                        Accept
+                      </button>
+                      <button
+                        (click)="rejectReRoute()"
+                        [disabled]="isRejectingReRoute()"
+                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-[12px] font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                      >
+                        @if (isRejectingReRoute()) {
+                          <div class="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                        } @else {
+                          <span class="material-symbols-outlined text-[16px]">cancel</span>
+                        }
+                        Reject
+                      </button>
+                    </div>
+                  } @else {
+                    <button
+                      (click)="cancelReRoute()"
+                      [disabled]="isCancellingReRoute()"
+                      class="flex w-full items-center justify-center gap-1 rounded-lg bg-amber-200 px-3 py-2 text-[12px] font-medium text-amber-900 transition-colors hover:bg-amber-300 disabled:opacity-50"
+                    >
+                      @if (isCancellingReRoute()) {
+                        <div class="h-3 w-3 animate-spin rounded-full border-2 border-amber-900 border-t-transparent"></div>
+                      } @else {
+                        <span class="material-symbols-outlined text-[16px]">close</span>
+                      }
+                      Cancel Request
+                    </button>
+                  }
                 </div>
               }
 
@@ -600,10 +676,18 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
   private readonly router = inject(Router)
   private readonly dmService = inject(DepartmentManagerService)
   private readonly dashboardService = inject(DashboardService)
+  protected readonly authStore = inject(AuthStore)
 
   issue = signal<DepartmentManagerIssueDetail | null>(null)
   isLoading = signal(true)
   issueStatuses = signal<IssueStatusLookup[]>([])
+  pendingReRouteRequest = signal<any | null>(null)
+  myDepartmentId = signal<number | null>(null)
+  isIncomingReRoute = computed(() => {
+    const req = this.pendingReRouteRequest()
+    const myDeptId = this.myDepartmentId()
+    return req != null && req.targetDepartmentId === myDeptId
+  })
 
   // Staff list for assign
   staffMembers = signal<StaffMemberResponse[]>([])
@@ -627,6 +711,10 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
   assignNote = ''
   isAssigning = signal(false)
 
+  isCancellingReRoute = signal(false)
+  isAcceptingReRoute = signal(false)
+  isRejectingReRoute = signal(false)
+
   // Image modal
   showImageModal = signal(false)
   selectedImageUrl = signal<string | null>(null)
@@ -635,11 +723,21 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
   private marker!: L.Marker
 
   ngOnInit(): void {
+    this.loadMyDepartment()
     const id = this.route.snapshot.paramMap.get('id')
     if (id) {
       this.loadIssueDetail(parseInt(id, 10))
     }
     this.loadIssueStatuses()
+  }
+
+  private loadMyDepartment(): void {
+    this.dmService.getCurrentUserDepartment().subscribe({
+      next: (dept) => {
+        if (dept) this.myDepartmentId.set(dept.departmentId)
+      },
+      error: () => this.myDepartmentId.set(null)
+    })
   }
 
   ngAfterViewInit(): void {
@@ -660,6 +758,8 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
         this.isLoading.set(false)
         // Initialize map after data is loaded
         setTimeout(() => this.initMap(), 100)
+        // Load pending re-route request for this issue
+        this.loadPendingReRoute(issueId)
       },
       error: (err) => {
         console.error('Failed to load issue detail:', err)
@@ -870,10 +970,81 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
         alert('Đã gửi yêu cầu chuyển đơn vị. Vui lòng chờ phản hồi.');
         this.isReassigning.set(false)
         this.closeReassignModal()
+        this.loadPendingReRoute(issue.issueId)
       },
       error: (err) => {
         console.error('Failed to reassign issue:', err)
         this.isReassigning.set(false)
+      }
+    })
+  }
+
+  loadPendingReRoute(issueId: number): void {
+    this.dmService.getPendingReRouteByIssue(issueId).subscribe({
+      next: (reRoute) => {
+        this.pendingReRouteRequest.set(reRoute ?? null)
+      },
+      error: () => {
+        this.pendingReRouteRequest.set(null)
+      }
+    })
+  }
+
+  cancelReRoute(): void {
+    const request = this.pendingReRouteRequest()
+    if (!request) return
+
+    if (!confirm('Bạn có chắc muốn hủy yêu cầu chuyển đơn vị này?')) return
+
+    this.isCancellingReRoute.set(true)
+    this.dashboardService.post<any>(`/re-route-requests/${request.id}/cancel`, {}).subscribe({
+      next: () => {
+        this.pendingReRouteRequest.set(null)
+        this.isCancellingReRoute.set(false)
+      },
+      error: (err) => {
+        console.error('Failed to cancel re-route:', err)
+        this.isCancellingReRoute.set(false)
+      }
+    })
+  }
+
+  acceptReRoute(): void {
+    const request = this.pendingReRouteRequest()
+    if (!request) return
+
+    this.isAcceptingReRoute.set(true)
+    this.dmService.acceptReRouteRequest(request.id).subscribe({
+      next: () => {
+        this.pendingReRouteRequest.set(null)
+        this.isAcceptingReRoute.set(false)
+        const issue = this.issue()
+        if (issue) this.loadIssueDetail(issue.issueId)
+      },
+      error: (err) => {
+        console.error('Failed to accept re-route:', err)
+        this.isAcceptingReRoute.set(false)
+      }
+    })
+  }
+
+  rejectReRoute(): void {
+    const request = this.pendingReRouteRequest()
+    if (!request) return
+
+    if (!confirm('Bạn có chắc muốn từ chối yêu cầu chuyển đơn vị này?')) return
+
+    this.isRejectingReRoute.set(true)
+    this.dmService.rejectReRouteRequest(request.id).subscribe({
+      next: () => {
+        this.pendingReRouteRequest.set(null)
+        this.isRejectingReRoute.set(false)
+        const issue = this.issue()
+        if (issue) this.loadIssueDetail(issue.issueId)
+      },
+      error: (err) => {
+        console.error('Failed to reject re-route:', err)
+        this.isRejectingReRoute.set(false)
       }
     })
   }

@@ -4,6 +4,7 @@ export interface AuthUser {
   fullName: string
   email: string
   roles: string[]
+  departmentId?: number
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
