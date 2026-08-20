@@ -17,6 +17,22 @@ export class NotificationService {
     return this.http.get<NotificationItem[]>(this.baseUrl, { params })
   }
 
+  getReadNotifications(userId?: string): Observable<NotificationItem[]> {
+    let params = new HttpParams()
+    if (userId) {
+      params = params.set('user_id', userId)
+    }
+    return this.http.get<NotificationItem[]>(`${this.baseUrl}/read`, { params })
+  }
+
+  getAllNotifications(userId?: string): Observable<NotificationItem[]> {
+    let params = new HttpParams()
+    if (userId) {
+      params = params.set('user_id', userId)
+    }
+    return this.http.get<NotificationItem[]>(`${this.baseUrl}/all`, { params })
+  }
+
   createNotification(payload: CreateNotificationPayload): Observable<NotificationItem> {
     return this.http.post<NotificationItem>(this.baseUrl, payload)
   }

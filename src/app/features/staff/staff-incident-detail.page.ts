@@ -188,7 +188,7 @@ L.Icon.Default.mergeOptions({
               <!-- Map Container -->
               <div
                 #mapContainer
-                class="mb-4 h-[400px] w-full overflow-hidden rounded-lg border border-[var(--color-outline-variant)]"
+                class="relative z-0 mb-4 h-[400px] w-full overflow-hidden rounded-lg border border-[var(--color-outline-variant)]"
               ></div>
               <!-- Open in Google Maps Button -->
               <a
@@ -299,13 +299,14 @@ L.Icon.Default.mergeOptions({
                       <img
                         [src]="getImageUrl(img.fileUrl)"
                         alt="Reporter photo"
-                        class="h-full w-full object-cover"
+                        class="h-full w-full cursor-pointer object-cover"
+                        (click)="openImageModal(img)"
                       />
                       <div
-                        class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
+                        class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
                       >
                         <span
-                          class="material-symbols-outlined cursor-pointer text-[var(--color-on-inverse-surface)]"
+                          class="material-symbols-outlined text-[var(--color-on-inverse-surface)]"
                           >zoom_in</span
                         >
                       </div>
@@ -418,13 +419,14 @@ L.Icon.Default.mergeOptions({
                         <img
                           [src]="getImageUrl(img.fileUrl)"
                           alt="Evidence photo"
-                          class="h-full w-full object-cover"
+                          class="h-full w-full cursor-pointer object-cover"
+                          (click)="openImageModal(img)"
                         />
                         <div
-                          class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
+                          class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
                         >
                           <span
-                            class="material-symbols-outlined cursor-pointer text-[var(--color-on-inverse-surface)]"
+                            class="material-symbols-outlined text-[var(--color-on-inverse-surface)]"
                             >zoom_in</span
                           >
                         </div>
@@ -440,6 +442,28 @@ L.Icon.Default.mergeOptions({
     } @else {
       <div class="flex min-h-screen items-center justify-center">
         <p class="text-[var(--color-on-surface-variant)]">Incident not found.</p>
+      </div>
+    }
+
+    <!-- Image Modal -->
+    @if (showImageModal()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" (click)="closeImageModal()">
+        <button class="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20" (click)="closeImageModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <div class="relative">
+          <img
+            [src]="getImageUrl(selectedImage()?.url ?? '')"
+            alt="Full size"
+            class="max-h-[85vh] max-w-[90vw] object-contain"
+            (click)="$event.stopPropagation()"
+          />
+          @if (selectedImage()) {
+            <div class="absolute bottom-4 right-4 rounded-lg bg-black/70 px-4 py-3 text-white backdrop-blur-sm">
+              <p class="text-[11px] text-white/80">Uploaded: {{ formatDateTime(selectedImage()!.uploadedAt) }}</p>
+            </div>
+          }
+        </div>
       </div>
     }
   `,
@@ -478,6 +502,10 @@ export class StaffIncidentDetailComponent implements OnInit, OnDestroy {
   actionLoading = signal(false)
   selectedFiles: { file: File; preview: string }[] = []
   isDragging = false
+
+  // Image modal
+  showImageModal = signal(false)
+  selectedImage = signal<{ url: string; uploadedAt: string } | null>(null)
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')
@@ -691,5 +719,15 @@ export class StaffIncidentDetailComponent implements OnInit, OnDestroy {
       },
       error: () => this.actionLoading.set(false),
     })
+  }
+
+  openImageModal(img: { fileUrl: string; createdAt: string }): void {
+    this.selectedImage.set({ url: img.fileUrl, uploadedAt: img.createdAt })
+    this.showImageModal.set(true)
+  }
+
+  closeImageModal(): void {
+    this.showImageModal.set(false)
+    this.selectedImage.set(null)
   }
 }

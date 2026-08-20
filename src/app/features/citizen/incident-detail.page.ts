@@ -117,55 +117,35 @@ import { parseUtcDate, getSlaCountdownInfo, formatLocalDateTime, formatLocalDate
           <!-- Main Content Area -->
           <div class="flex flex-col gap-6 md:col-span-8">
             <!-- Image Gallery -->
-            <div
-              class="overflow-hidden rounded-xl border border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-lowest)] p-1 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]"
-            >
-              <div class="group relative h-[300px] w-full overflow-hidden rounded-lg md:h-[400px]">
-                @if (selectedImageUrl()) {
-                  <img
-                    [src]="selectedImageUrl()"
-                    [alt]="issue()!.title"
-                    class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                } @else {
-                  <div
-                    class="flex h-full w-full items-center justify-center bg-[var(--color-surface-variant)]"
-                  >
-                    <span class="material-symbols-outlined text-6xl text-[var(--color-outline)]"
-                      >report</span
-                    >
-                  </div>
-                }
-                <div
-                  class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"
-                ></div>
-                <div class="absolute bottom-4 left-4 flex gap-2">
-                  <span
-                    class="flex items-center gap-1 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white backdrop-blur-sm"
-                  >
-                    <span class="material-symbols-outlined text-[14px]">image</span>
-                    {{ selectedImageIndex() + 1 }} of {{ issue()!.attachments.length }}
-                  </span>
-                </div>
-              </div>
-              <!-- Thumbnail Strip -->
-              @if (issue()!.attachments.length > 1) {
-                <div class="flex gap-2 overflow-x-auto p-2">
-                  @for (image of issue()!.attachments; track image.id; let index = $index) {
-                    <button
-                      type="button"
-                      class="h-24 w-28 shrink-0 overflow-hidden rounded-lg"
-                      [class.border-2]="selectedImageIndex() === index"
-                      [class.border-[var(--color-primary)]]="selectedImageIndex() === index"
-                      (click)="selectImage(index)"
-                    >
+            <div class="overflow-hidden rounded-xl border border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-lowest)] p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
+              <h2 class="mb-4 flex items-center gap-2 text-[18px] font-semibold text-[var(--color-on-surface)]">
+                <span class="material-symbols-outlined text-[var(--color-primary)]">photo_library</span>
+                Hình ảnh
+              </h2>
+              @if (issue()!.attachments && issue()!.attachments.length > 0) {
+                <div class="grid grid-cols-2 gap-4">
+                  @for (att of issue()!.attachments; track att.id; let index = $index) {
+                    <div class="group relative aspect-video overflow-hidden rounded-lg">
                       <img
-                        [src]="getImageUrl(image.thumbnailUrl || image.fileUrl)"
+                        class="h-full w-full cursor-pointer object-cover transition-transform duration-300 group-hover:scale-105"
+                        [src]="getImageUrl(att.thumbnailUrl || att.fileUrl)"
                         [alt]="issue()!.title"
-                        class="h-full w-full object-cover"
+                        (click)="openImageModal(index)"
                       />
-                    </button>
+                      <div class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                        <span class="material-symbols-outlined text-3xl text-white">zoom_in</span>
+                      </div>
+                      <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-white">
+                        <p class="text-[11px] font-medium">{{ getAttachmentUploader(index) }}</p>
+                        <p class="text-[10px] text-white/80">{{ formatDate(att.createdAt) }}</p>
+                      </div>
+                    </div>
                   }
+                </div>
+              } @else {
+                <div class="flex h-32 items-center justify-center rounded-lg bg-[var(--color-surface-container)]">
+                  <span class="material-symbols-outlined text-4xl text-[var(--color-outline)]">image</span>
+                  <p class="ml-2 text-[14px] text-[var(--color-on-surface-variant)]">Không có hình ảnh</p>
                 </div>
               }
             </div>
@@ -458,6 +438,43 @@ import { parseUtcDate, getSlaCountdownInfo, formatLocalDateTime, formatLocalDate
         </div>
       }
     </div>
+
+    <!-- Image Modal -->
+    @if (showImageModal() && issue()?.attachments?.length) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" (click)="closeImageModal()">
+        <button class="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20" (click)="closeImageModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <button
+          class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+          (click)="prevImage(); $event.stopPropagation()"
+        >
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        <button
+          class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+          (click)="nextImage(); $event.stopPropagation()"
+        >
+          <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+        <div class="relative" (click)="$event.stopPropagation()">
+          <img
+            [src]="selectedImageUrl()!"
+            [alt]="issue()!.title"
+            class="max-h-[85vh] max-w-[90vw] object-contain"
+          />
+          @if (issue()!.attachments[selectedImageIndex()]) {
+            <div class="absolute bottom-4 right-4 rounded-lg bg-black/70 px-4 py-3 text-white backdrop-blur-sm">
+              <p class="text-[12px] font-medium">{{ getAttachmentUploader(selectedImageIndex()) }}</p>
+              <p class="text-[11px] text-white/80">{{ formatDate(issue()!.attachments[selectedImageIndex()].createdAt) }}</p>
+            </div>
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-white backdrop-blur-sm">
+              <span class="text-[12px]">{{ selectedImageIndex() + 1 }} / {{ issue()!.attachments.length }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
   `,
   styles: [
     `
@@ -482,6 +499,7 @@ export class IncidentDetailComponent implements OnInit {
   timeline = signal<IssueTimelineItemResponse[]>([])
   selectedImageIndex = signal(0)
   isLoading = signal(true)
+  showImageModal = signal(false)
   newComment = ''
 
   ngOnInit(): void {
@@ -555,6 +573,41 @@ export class IncidentDetailComponent implements OnInit {
     if (!current) return null
     const attachment = current.attachments[this.selectedImageIndex()]
     return this.getImageUrl(attachment?.fileUrl || current.thumbnailUrl)
+  }
+
+  getAttachmentUploader(index: number): string {
+    const current = this.issue()
+    if (!current) return ''
+    const att = current.attachments[index]
+    if (!att) return ''
+    // Determine if it's a staff upload based on URL pattern
+    if (att.fileUrl.includes('/staff/')) {
+      return 'Nhân viên'
+    }
+    return current.reporterDisplayName || 'Công dân'
+  }
+
+  openImageModal(index: number): void {
+    this.selectedImageIndex.set(index)
+    this.showImageModal.set(true)
+  }
+
+  closeImageModal(): void {
+    this.showImageModal.set(false)
+  }
+
+  prevImage(): void {
+    const current = this.issue()
+    if (!current) return
+    const total = current.attachments.length
+    this.selectedImageIndex.set((this.selectedImageIndex() - 1 + total) % total)
+  }
+
+  nextImage(): void {
+    const current = this.issue()
+    if (!current) return
+    const total = current.attachments.length
+    this.selectedImageIndex.set((this.selectedImageIndex() + 1) % total)
   }
 
   selectImage(index: number): void {

@@ -81,6 +81,15 @@ export interface IssueUpdateInfo {
   createdAt: string
 }
 
+export interface ImageInfo {
+  url: string
+  thumbnailUrl?: string
+  uploadedByName: string
+  uploadedByRole?: string
+  uploadedAt: string
+  kind: 'citizen' | 'staff'
+}
+
 export interface DepartmentManagerIssueDetail {
   issueId: number
   publicCode: string
@@ -97,7 +106,7 @@ export interface DepartmentManagerIssueDetail {
   resolvedAt?: string
   upvoteCount: number
   isPublic: boolean
-  imageUrls: string[]
+  imageUrls: ImageInfo[]
   currentAssignment?: CurrentAssignmentInfo
   assignedMembers: AssignmentMemberInfo[]
   updates: IssueUpdateInfo[]
