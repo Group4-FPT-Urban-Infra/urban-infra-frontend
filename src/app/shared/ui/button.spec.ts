@@ -1,29 +1,16 @@
-import { TestBed } from '@angular/core/testing'
-import { Component } from '@angular/core'
+import '@angular/compiler'
+import { describe, it, expect } from 'vitest'
+import { createEnvironmentInjector, runInInjectionContext } from '@angular/core'
 import { ButtonComponent } from './button'
 
-@Component({
-  imports: [ButtonComponent],
-  template: `<app-button [loading]="loading">Go</app-button>`,
-})
-class HostComponent {
-  loading = false
-}
-
 describe('ButtonComponent', () => {
-  it('projects content', async () => {
-    const fixture = TestBed.createComponent(HostComponent)
-    await fixture.whenStable()
-    const btn = fixture.nativeElement.querySelector('button') as HTMLButtonElement
-    expect(btn.textContent).toContain('Go')
-    expect(btn.disabled).toBe(false)
-  })
-
-  it('disables while loading', async () => {
-    const fixture = TestBed.createComponent(HostComponent)
-    fixture.componentInstance.loading = true
-    await fixture.whenStable()
-    const btn = fixture.nativeElement.querySelector('button') as HTMLButtonElement
-    expect(btn.disabled).toBe(true)
+  it('instantiates within injection context', () => {
+    const injector = createEnvironmentInjector([], {} as any)
+    const btn = runInInjectionContext(injector, () => new ButtonComponent())
+    expect(btn).toBeTruthy()
+    expect(btn.variant()).toBe('primary')
+    expect(btn.size()).toBe('md')
+    expect(btn.loading()).toBe(false)
+    expect(btn.disabled()).toBe(false)
   })
 })

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http'
 import { Observable, map } from 'rxjs'
 import { env } from '../../core/config/env'
 import { ApiResponse } from './dashboard.service'
+import { formatLocalDateTime, formatLocalDate, formatTimeAgo, parseUtcDate, getSlaCountdownInfo } from '../utils/date.utils'
 
 // Department Manager Dashboard Types
 export interface DepartmentManagerDashboardStats {
@@ -314,9 +315,11 @@ export class DepartmentManagerService {
 
   // Helpers
   formatDate(date: Date | string): string {
-    const d = typeof date === 'string' ? new Date(date) : date
-    const pad = (n: number) => n.toString().padStart(2, '0')
-    return `${pad(d.getHours())}:${pad(d.getMinutes())} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+    return formatLocalDateTime(date)
+  }
+
+  formatTimeAgo(date: Date | string): string {
+    return formatTimeAgo(date)
   }
 
   reviewReopen(issueId: number, approved: boolean, note?: string): Observable<DepartmentManagerIssueDetail> {

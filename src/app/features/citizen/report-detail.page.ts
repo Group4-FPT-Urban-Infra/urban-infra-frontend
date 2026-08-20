@@ -3,11 +3,12 @@ import { Component, OnInit, inject, signal } from '@angular/core'
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser'
 import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { DashboardService, ReportDetailResponse } from '../../core/services/dashboard.service'
+import { AppDatePipe } from '../../shared/pipes/app-date.pipe'
 
 @Component({
   selector: 'app-report-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, AppDatePipe],
   template: `
     <div class="min-h-screen bg-[var(--color-surface)] p-4 md:p-8">
       <button type="button" (click)="goBack()" class="mb-5 flex items-center gap-2 text-sm text-[var(--color-primary)]">
@@ -70,7 +71,7 @@ import { DashboardService, ReportDetailResponse } from '../../core/services/dash
             </div>
             <div class="rounded-xl bg-white p-5 text-sm shadow-sm">
               <p><strong>Người báo:</strong> {{ item.reporterDisplayName }}</p>
-              <p class="mt-2"><strong>Thời gian:</strong> {{ item.reportedAt | date:'medium' }}</p>
+              <p class="mt-2"><strong>Thời gian:</strong> {{ item.reportedAt | appDate:'medium' }}</p>
             </div>
           </aside>
         </div>

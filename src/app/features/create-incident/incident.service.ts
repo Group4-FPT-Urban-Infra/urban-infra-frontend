@@ -10,6 +10,7 @@ import type {
   NearbyIssueResponse,
   PriorityLookupItem,
 } from './incident.types'
+import { formatTimeAgo } from '../../core/utils/date.utils'
 
 @Injectable({ providedIn: 'root' })
 export class IncidentService {
@@ -83,7 +84,7 @@ export class IncidentService {
           description: '',
           status: (item.status as unknown as { name?: string })?.name || item.status?.['name'] || 'Open',
           distance: item.distanceMeters,
-          timeAgo: this.formatTimeAgo(new Date(item.reportedAt)),
+          timeAgo: this.formatTimeAgo(item.reportedAt),
           icon: 'warning',
         }))
       })
@@ -144,17 +145,7 @@ export class IncidentService {
   /**
    * Format date to "time ago" string
    */
-  private formatTimeAgo(date: Date): string {
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffHours < 24) return `${diffHours} hr ago`
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-    return date.toLocaleDateString()
+  private formatTimeAgo(date: Date | string): string {
+    return formatTimeAgo(date)
   }
 }

@@ -5,11 +5,12 @@ import { AuthStore } from '../../core/auth/auth.store'
 import { TranslateService } from '@ngx-translate/core'
 import { NotificationService } from '../../core/services/notification.service'
 import { NotificationItem } from '../../core/models/notification.model'
+import { AppDatePipe } from '../pipes/app-date.pipe'
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, AppDatePipe],
   styles: [
     `
       .nav-link-active {
@@ -128,7 +129,7 @@ import { NotificationItem } from '../../core/models/notification.model'
                         <p class="text-xs font-semibold text-[var(--color-on-surface)] truncate">{{ item.title }}</p>
                         <p class="text-xs text-[var(--color-on-surface-variant)] mt-0.5 leading-snug line-clamp-2">{{ item.message }}</p>
                         <span class="text-[10px] text-[var(--color-outline)] mt-1 block">
-                          {{ item.createdAt | date: 'short' }}
+                          {{ item.createdAt | appDate: 'short' }}
                         </span>
                       </div>
 
@@ -231,13 +232,21 @@ import { NotificationItem } from '../../core/models/notification.model'
               </div>
             }
           } @else {
-            <!-- Login for guests -->
-            <a
-              routerLink="/login"
-              class="inline-flex h-8 items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 text-xs font-medium text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary)]/90"
-            >
-              Sign In
-            </a>
+            <!-- Login & Register for guests -->
+            <div class="flex items-center gap-2">
+              <a
+                routerLink="/register"
+                class="hidden sm:inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] px-3 text-xs font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container-high)]"
+              >
+                Đăng ký
+              </a>
+              <a
+                routerLink="/login"
+                class="inline-flex h-8 items-center gap-1 rounded-lg bg-[var(--color-primary)] px-3.5 text-xs font-medium text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary)]/90 shadow-sm"
+              >
+                Đăng nhập
+              </a>
+            </div>
           }
         </div>
 

@@ -12,6 +12,7 @@ import {
   StaffMemberResponse,
 } from '../../core/services/department-manager.service'
 import { IssueStatusLookup } from '../../core/services/dashboard.service'
+import { parseUtcDate, formatLocalDateTime, formatLocalDate, formatTimeAgo } from '../../core/utils/date.utils'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -670,30 +671,15 @@ export class AdminIncidentDetailComponent implements OnInit, AfterViewInit, OnDe
   }
 
   formatReportedAt(dateStr: string): string {
-    const date = new Date(dateStr)
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-    return `Reported on ${date.toLocaleDateString('en-US', options)}`
+    return `Reported on ${formatLocalDateTime(dateStr)}`
   }
 
   formatDate(dateStr: string): string {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return formatLocalDate(dateStr)
   }
 
   formatDateTime(dateStr: string): string {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return formatLocalDateTime(dateStr)
   }
 
   getImageUrl(path: string): string {

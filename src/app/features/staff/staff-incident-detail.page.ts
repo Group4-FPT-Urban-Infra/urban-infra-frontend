@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import * as L from 'leaflet'
 import { StaffService, StaffIncidentDetailResponse } from './staff.service'
+import { formatLocalDateTime, formatLocalDate, formatTimeAgo, parseUtcDate } from '../../core/utils/date.utils'
 
 // Fix Leaflet default icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -557,13 +558,7 @@ export class StaffIncidentDetailComponent implements OnInit, OnDestroy {
   }
 
   formatDateTime(dateStr: string): string {
-    const date = new Date(dateStr)
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const year = date.getFullYear()
-    const hours = date.getHours().toString().padStart(2, '0')
-    const minutes = date.getMinutes().toString().padStart(2, '0')
-    return `${hours}:${minutes} ${day}/${month}/${year}`
+    return formatLocalDateTime(dateStr)
   }
 
   getInitials(name: string): string {

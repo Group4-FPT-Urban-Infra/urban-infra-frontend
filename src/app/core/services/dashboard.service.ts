@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core'
 import { HttpClient, HttpParams } from '@angular/common/http'
 import { Observable, map, forkJoin, of } from 'rxjs'
 import { env } from '../../core/config/env'
+import { parseUtcDate, formatTimeAgo, formatLocalDate, formatLocalDateTime } from '../utils/date.utils'
 
 export interface DashboardStatsResponse {
   activeIssuesCount: number
@@ -415,18 +416,19 @@ export class DashboardService {
   }
 
   formatTimeAgo(date: Date | string): string {
-    const d = typeof date === 'string' ? new Date(date) : date
-    const now = new Date()
-    const diffMs = now.getTime() - d.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
+    return formatTimeAgo(date)
+  }
 
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffHours < 24) return `${diffHours} hr ago`
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-    return d.toLocaleDateString()
+  parseDate(date: Date | string | null | undefined): Date {
+    return parseUtcDate(date)
+  }
+
+  formatDate(date: Date | string | null | undefined): string {
+    return formatLocalDate(date)
+  }
+
+  formatDateTime(date: Date | string | null | undefined): string {
+    return formatLocalDateTime(date)
   }
 
   formatNumber(num: number): string {
