@@ -9,6 +9,7 @@ import { AuthStore } from '../../core/auth/auth.store'
 import {
   DepartmentManagerIssueDetail,
   DepartmentManagerUpdateIssueStatusRequest,
+  ImageInfo,
   StaffMemberResponse,
 } from '../../core/services/department-manager.service'
 import { IssueStatusLookup } from '../../core/services/dashboard.service'
@@ -176,16 +177,21 @@ L.Icon.Default.mergeOptions({
                   Citizen Uploads
                 </h2>
                 <div class="grid grid-cols-2 gap-4">
-                  @for (imageUrl of issue()!.imageUrls; track $index) {
+                  @for (image of getCitizenImages(); track $index) {
                     <div class="group relative aspect-video overflow-hidden rounded-lg">
                       <img
                         class="h-full w-full cursor-pointer object-cover transition-transform duration-300 group-hover:scale-105"
-                        [src]="getImageUrl(imageUrl)"
+                        [src]="getImageUrl(image.url)"
                         alt="Citizen upload"
-                        (click)="openImageModal(imageUrl)"
+                        (click)="openImageModal(image)"
                       />
-                      <div class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
                         <span class="material-symbols-outlined text-3xl text-white">zoom_in</span>
+                      </div>
+                      <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                        <p class="text-[11px] font-medium text-white truncate">{{ image.uploadedByName }}</p>
+                        <p class="text-[10px] text-white/80">{{ image.uploadedByRole }}</p>
+                        <p class="text-[10px] text-white/60">{{ formatDateTime(image.uploadedAt) }}</p>
                       </div>
                     </div>
                   }
@@ -194,15 +200,31 @@ L.Icon.Default.mergeOptions({
             }
 
             <!-- Evidence - Staff Uploads -->
-            @if (issue()!.assignedMembers && issue()!.assignedMembers.length > 0) {
+            @if (getStaffImages().length > 0) {
               <div class="rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface-container-lowest)] p-6 shadow-sm">
                 <h2 class="mb-4 flex items-center gap-2 text-[18px] font-semibold text-[var(--color-on-surface)]">
                   <span class="material-symbols-outlined text-[var(--color-primary)]">verified</span>
                   Evidence
                 </h2>
-                <div class="rounded-lg bg-[var(--color-surface-container)] p-4 text-center text-[14px] text-[var(--color-on-surface-variant)]">
-                  <span class="material-symbols-outlined text-4xl text-[var(--color-outline)]">folder_open</span>
-                  <p class="mt-2">Evidence uploads from assigned staff will appear here</p>
+                <div class="grid grid-cols-2 gap-4">
+                  @for (image of getStaffImages(); track $index) {
+                    <div class="group relative aspect-video overflow-hidden rounded-lg">
+                      <img
+                        class="h-full w-full cursor-pointer object-cover transition-transform duration-300 group-hover:scale-105"
+                        [src]="getImageUrl(image.url)"
+                        alt="Staff evidence"
+                        (click)="openImageModal(image)"
+                      />
+                      <div class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                        <span class="material-symbols-outlined text-3xl text-white">zoom_in</span>
+                      </div>
+                      <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                        <p class="text-[11px] font-medium text-white truncate">{{ image.uploadedByName }}</p>
+                        <p class="text-[10px] text-white/80">{{ image.uploadedByRole }}</p>
+                        <p class="text-[10px] text-white/60">{{ formatDateTime(image.uploadedAt) }}</p>
+                      </div>
+                    </div>
+                  }
                 </div>
               </div>
             }
@@ -213,7 +235,7 @@ L.Icon.Default.mergeOptions({
                 <span class="material-symbols-outlined text-[var(--color-primary)]">location_on</span>
                 Location
               </h2>
-              <div #mapContainer class="relative aspect-[21/9] overflow-hidden rounded-lg bg-[var(--color-surface-container-high)]"></div>
+              <div #mapContainer class="relative z-0 aspect-[21/9] overflow-hidden rounded-lg bg-[var(--color-surface-container-high)]"></div>
               <div class="mt-4 flex items-center justify-between text-[14px] text-[var(--color-on-surface-variant)]">
                 <span>{{ issue()!.latitude.toFixed(6) }}, {{ issue()!.longitude.toFixed(6) }}</span>
                 <a
@@ -653,12 +675,21 @@ L.Icon.Default.mergeOptions({
         <button class="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20" (click)="closeImageModal()">
           <span class="material-symbols-outlined">close</span>
         </button>
-        <img
-          [src]="getImageUrl(selectedImageUrl()!)"
-          alt="Full size"
-          class="max-h-[90vh] max-w-[90vw] object-contain"
-          (click)="$event.stopPropagation()"
-        />
+        <div class="relative">
+          <img
+            [src]="getImageUrl(selectedImage()?.url ?? '')"
+            alt="Full size"
+            class="max-h-[85vh] max-w-[90vw] object-contain"
+            (click)="$event.stopPropagation()"
+          />
+          @if (selectedImage()) {
+            <div class="absolute bottom-4 right-4 rounded-lg bg-black/70 px-4 py-3 text-white backdrop-blur-sm">
+              <p class="text-[13px] font-semibold">{{ selectedImage()!.uploadedByName }}</p>
+              <p class="text-[11px] text-white/80">{{ selectedImage()!.uploadedByRole }}</p>
+              <p class="text-[10px] text-white/60">{{ formatDateTime(selectedImage()!.uploadedAt) }}</p>
+            </div>
+          }
+        </div>
       </div>
     }
   `,
@@ -718,7 +749,7 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
 
   // Image modal
   showImageModal = signal(false)
-  selectedImageUrl = signal<string | null>(null)
+  selectedImage = signal<ImageInfo | null>(null)
 
   private map!: L.Map
   private marker!: L.Marker
@@ -842,14 +873,22 @@ export class StaffManagerIncidentDetailComponent implements OnInit, AfterViewIni
     return `https://www.google.com/maps?q=${issue.latitude},${issue.longitude}`
   }
 
-  openImageModal(imageUrl: string): void {
-    this.selectedImageUrl.set(imageUrl)
+  openImageModal(image: ImageInfo): void {
+    this.selectedImage.set(image)
     this.showImageModal.set(true)
   }
 
   closeImageModal(): void {
     this.showImageModal.set(false)
-    this.selectedImageUrl.set(null)
+    this.selectedImage.set(null)
+  }
+
+  getCitizenImages(): ImageInfo[] {
+    return this.issue()?.imageUrls?.filter(img => img.kind === 'citizen') ?? []
+  }
+
+  getStaffImages(): ImageInfo[] {
+    return this.issue()?.imageUrls?.filter(img => img.kind === 'staff') ?? []
   }
 
   getMemberStatusClass(status: string): string {

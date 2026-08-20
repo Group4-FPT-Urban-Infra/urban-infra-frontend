@@ -433,7 +433,7 @@ export class CitizenReportsComponent implements OnInit {
   }
 
   viewDetail(id: number): void {
-    void this.router.navigate(['/citizen/reports', id])
+    void this.router.navigate(['/incidents', id])
   }
 
   toggleUpvote(issue: IssueSummaryResponse, event: Event): void {
