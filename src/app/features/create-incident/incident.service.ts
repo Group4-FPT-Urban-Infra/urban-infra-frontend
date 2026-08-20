@@ -1,0 +1,151 @@
+import { Injectable, inject } from '@angular/core'
+import { HttpClient, HttpParams } from '@angular/common/http'
+import { Observable, map } from 'rxjs'
+import { env } from '../../core/config/env'
+import type {
+  AreaLookupItem,
+  CreateIncidentPayload,
+  DuplicateIncident,
+  IssueTypeLookupItem,
+  NearbyIssueResponse,
+  PriorityLookupItem,
+} from './incident.types'
+import { formatTimeAgo } from '../../core/utils/date.utils'
+
+@Injectable({ providedIn: 'root' })
+export class IncidentService {
+  private readonly http = inject(HttpClient)
+  private readonly baseUrl = env.apiBaseUrl
+
+  /**
+   * Get areas for dropdown
+   * GET /api/areas?isActive=true
+   */
+  getAreas(): Observable<AreaLookupItem[]> {
+    const params = new HttpParams().set('isActive', 'true')
+    return this.http.get<AreaLookupItem[]>(`${this.baseUrl}/areas`, { params })
+  }
+
+  /**
+   * Get issue types for dropdown
+   * GET /api/issue-types/lookup?mode=flat
+   */
+  getIssueTypes(): Observable<IssueTypeLookupItem[]> {
+    return this.http.get<{ data: IssueTypeLookupItem[] } | IssueTypeLookupItem[]>(
+      `${this.baseUrl}/issue-types/lookup?mode=flat`
+    ).pipe(
+      map((response) => {
+        // Handle both wrapped and unwrapped responses
+        if (Array.isArray(response)) {
+          return response
+        }
+        return response.data || []
+      })
+    )
+  }
+
+  /**
+   * Get priorities for dropdown
+   * GET /api/issue-priorities?activeOnly=true
+   */
+  getPriorities(): Observable<PriorityLookupItem[]> {
+    const params = new HttpParams().set('activeOnly', 'true')
+    return this.http.get<PriorityLookupItem[]>(`${this.baseUrl}/issue-priorities`, { params })
+  }
+
+  /**
+   * Check nearby duplicate incidents
+   * GET /api/issues/nearby
+   */
+  checkDuplicates(
+    location: { latitude: number; longitude: number },
+    issueTypeId: number
+  ): Observable<DuplicateIncident[]> {
+    const params = new HttpParams()
+      .set('issueTypeId', issueTypeId.toString())
+      .set('latitude', location.latitude.toString())
+      .set('longitude', location.longitude.toString())
+      .set('radiusMeters', '500')
+      .set('withinDays', '30')
+      .set('limit', '10')
+
+    return this.http.get<{ data: NearbyIssueResponse[] } | NearbyIssueResponse[]>(
+      `${this.baseUrl}/issues/nearby`,
+      { params }
+    ).pipe(
+      map((response) => {
+        const items: NearbyIssueResponse[] = Array.isArray(response)
+          ? response
+          : (response.data || [])
+
+        return items.map((item) => ({
+          id: String(item.id),
+          title: item.title,
+          description: '',
+          status: (item.status as unknown as { name?: string })?.name || item.status?.['name'] || 'Open',
+          distance: item.distanceMeters,
+          timeAgo: this.formatTimeAgo(item.reportedAt),
+          icon: 'warning',
+        }))
+      })
+    )
+  }
+
+  /**
+   * Upvote an incident
+   * POST /api/issues/{incidentId}/upvote
+   */
+  upvoteIncident(incidentId: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/issues/${incidentId}/upvote`, {})
+  }
+
+  /**
+   * Create a new citizen report (generates one or more Issue records internally)
+   * POST /api/reports (multipart/form-data)
+   */
+  createIncident(payload: CreateIncidentPayload): Observable<{ id: number; publicCode: string; issues?: { id: number }[] }> {
+    const formData = new FormData()
+
+    // Required fields - send multiple issue type IDs
+    for (const issueTypeId of payload.details.issueTypeIds) {
+      formData.append('IssueTypeIds', String(issueTypeId))
+    }
+    formData.append('AreaId', String(payload.details.areaId))
+    formData.append('Title', payload.details.title)
+    formData.append('Description', payload.details.description)
+    formData.append('Latitude', String(payload.location.latitude))
+    formData.append('Longitude', String(payload.location.longitude))
+
+    // Optional fields
+    if (payload.location.address) {
+      formData.append('AddressText', payload.location.address)
+    }
+    if (payload.details.priorityId) {
+      formData.append('PriorityId', String(payload.details.priorityId))
+    }
+
+    // Photos
+    for (const photo of payload.photos) {
+      formData.append('Images', photo.file)
+    }
+
+    return this.http.post<{ success: boolean; data?: { id: number; publicCode: string; issues?: { id: number }[] }; message?: string }>(
+      `${this.baseUrl}/reports`,
+      formData
+    ).pipe(
+      map((response) => {
+        if (response.success && response.data) {
+          return response.data
+        }
+        throw new Error(response.message || 'Failed to create incident')
+      })
+    )
+  }
+
+  /**
+   * Format date to "time ago" string
+   */
+  private formatTimeAgo(date: Date | string): string {
+    return formatTimeAgo(date)
+  }
+}

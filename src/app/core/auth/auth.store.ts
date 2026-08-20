@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { AuthService } from './auth.service'
 import { TokenStorage } from './token-storage'
-import type { AuthUser, LoginPayload } from './auth.types'
+import type { AuthUser, LoginPayload, RegisterPayload } from './auth.types'
 
 const USER_KEY = 'auth.user'
 
@@ -28,6 +28,7 @@ export class AuthStore {
   readonly status = this._status.asReadonly()
   readonly error = this._error.asReadonly()
   readonly isAuthenticated = computed(() => this._user() !== null)
+  readonly isAdmin = computed(() => this._user()?.roles?.includes('Admin') ?? false)
 
   // --- methods ---
   async login(payload: LoginPayload): Promise<void> {
@@ -35,6 +36,9 @@ export class AuthStore {
     this._error.set(null)
     try {
       const res = await firstValueFrom(this.auth.login(payload))
+      if (!res.success || !res.accessToken || !res.user) {
+        throw new Error(res.message ?? 'invalidCredentials')
+      }
       this.tokens.set(res.accessToken, res.refreshToken)
       this._user.set(res.user)
       localStorage.setItem(USER_KEY, JSON.stringify(res.user))
@@ -46,7 +50,57 @@ export class AuthStore {
     }
   }
 
+  async register(payload: RegisterPayload): Promise<void> {
+    this._status.set('loading')
+    this._error.set(null)
+    try {
+      const res = await firstValueFrom(this.auth.register(payload))
+      if (!res.success) {
+        throw new Error(res.message ?? 'registrationFailed')
+      }
+      // Auto-login after successful registration if tokens are returned
+      if (res.accessToken && res.user) {
+        this.tokens.set(res.accessToken, res.refreshToken)
+        this._user.set(res.user)
+        localStorage.setItem(USER_KEY, JSON.stringify(res.user))
+      }
+      this._status.set('idle')
+    } catch (e) {
+      this._status.set('error')
+      this._error.set(e instanceof Error ? e.message : 'registrationFailed')
+      throw e
+    }
+  }
+
   logout(): void {
+    // Capture tokens BEFORE clearing — the auth interceptor reads from storage
+    // so we need to fire the HTTP request first, then clear.
+    const accessToken = this.tokens.access
+    const refreshToken = this.tokens.refresh
+
+    // Clear local state immediately so the UI reacts right away
+    this.tokens.clear()
+    localStorage.removeItem(USER_KEY)
+    this._user.set(null)
+    this._status.set('idle')
+    this._error.set(null)
+
+    // Fire-and-forget: revoke refresh token on the server.
+    // Manually attach the access token since we already cleared storage.
+    if (refreshToken && accessToken) {
+      this.auth.logout(accessToken, refreshToken).subscribe({ error: () => {} })
+    }
+  }
+
+  updateSession(accessToken: string, refreshToken?: string, user?: AuthUser): void {
+    this.tokens.set(accessToken, refreshToken)
+    if (user) {
+      this._user.set(user)
+      localStorage.setItem(USER_KEY, JSON.stringify(user))
+    }
+  }
+
+  clearSession(): void {
     this.tokens.clear()
     localStorage.removeItem(USER_KEY)
     this._user.set(null)

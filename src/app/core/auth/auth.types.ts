@@ -1,16 +1,33 @@
+// ── Entities ──────────────────────────────────────────────────────────────────
 export interface AuthUser {
-  id: number
-  name: string
+  id: string
+  fullName: string
   email: string
+  roles: string[]
+  departmentId?: number
 }
 
+// ── Login ─────────────────────────────────────────────────────────────────────
 export interface LoginPayload {
   email: string
   password: string
 }
 
-export interface LoginResponse {
-  accessToken: string
+// ── Register ──────────────────────────────────────────────────────────────────
+export interface RegisterPayload {
+  fullName: string
+  email: string
+  phoneNumber: string
+  password: string
+}
+
+// ── API Response ──────────────────────────────────────────────────────────────
+/** Matches UrbanInfraSystem.Application.DTOs.Auth.AuthResponse */
+export interface AuthApiResponse {
+  success: boolean
+  message?: string
+  accessToken?: string
   refreshToken?: string
-  user: AuthUser
+  accessTokenExpiresAtUtc?: string
+  user?: AuthUser
 }

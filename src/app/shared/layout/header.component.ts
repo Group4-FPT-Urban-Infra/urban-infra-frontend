@@ -1,101 +1,647 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core'
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, inject, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { Router } from '@angular/router'
+import { Router, RouterLink } from '@angular/router'
 import { AuthStore } from '../../core/auth/auth.store'
-import { env } from '../../core/config/env'
 import { TranslateService } from '@ngx-translate/core'
+import { NotificationService } from '../../core/services/notification.service'
+import { NotificationItem } from '../../core/models/notification.model'
+import { AppDatePipe } from '../pipes/app-date.pipe'
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink, AppDatePipe],
+  styles: [
+    `
+      .nav-link-active {
+        color: var(--color-primary);
+        border-bottom: 2px solid var(--color-primary);
+        padding-bottom: 2px;
+      }
+    `,
+  ],
   template: `
-    <header class="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur transition-colors dark:border-slate-800 dark:bg-slate-900/95 sm:px-6">
-      <!-- Left: Sidebar Toggle & Brand -->
-      <div class="flex items-center gap-3">
+    <nav
+      class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-[var(--color-outline-variant)] bg-[var(--color-surface)]/80 px-6 py-2 backdrop-blur-xl shadow-sm"
+    >
+      <!-- Left: Brand + Search -->
+      <div class="flex items-center gap-6">
+        <!-- Brand -->
+        <a routerLink="/" class="flex items-center gap-2">
+          <span
+            class="material-symbols-outlined text-[var(--color-primary)]"
+            style="font-variation-settings:'FILL' 1; font-size:28px"
+            aria-hidden="true"
+            >security</span
+          >
+          <span class="text-xl font-bold tracking-tight text-[var(--color-primary)]"
+            >CivicShield</span
+          >
+        </a>
+
+        <!-- Search (desktop) -->
+        <div
+          class="hidden items-center gap-2 rounded-full border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] px-4 py-1.5 transition-colors focus-within:border-[var(--color-primary)] md:flex"
+        >
+          <span
+            class="material-symbols-outlined text-[20px] text-[var(--color-outline)]"
+            aria-hidden="true"
+            >search</span
+          >
+          <input
+            type="text"
+            placeholder="Search incidents..."
+            class="w-56 border-none bg-transparent text-sm text-[var(--color-on-surface)] placeholder:text-[var(--color-outline)] focus:outline-none focus:ring-0"
+          />
+        </div>
+      </div>
+
+      <!-- Right: Actions + Avatar -->
+      <div class="flex items-center gap-2 relative">
+        <!-- Notifications -->
+        @if (store.isAuthenticated()) {
+        <div class="relative">
+          <button
+            (click)="toggleNotificationsDropdown()"
+            class="relative rounded-full p-2 text-[var(--color-on-surface-variant)] transition-colors hover:bg-[var(--color-surface-variant)]/50 focus:outline-none"
+            title="Notifications"
+            type="button"
+          >
+            <span class="material-symbols-outlined text-[22px]" aria-hidden="true"
+              >notifications</span
+            >
+            @if (unreadNotifications().length > 0) {
+              <span
+                class="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow"
+              >
+                {{ unreadNotifications().length > 99 ? '99+' : unreadNotifications().length }}
+              </span>
+            }
+          </button>
+
+          <!-- Notifications Dropdown Panel -->
+          @if (showDropdown()) {
+            <div
+              class="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden"
+            >
+              <!-- Header -->
+              <div class="flex items-center justify-between border-b border-[var(--color-outline-variant)] px-4 py-3 bg-[var(--color-surface-container)]">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-[var(--color-on-surface)]">Thông báo</span>
+                  @if (unreadNotifications().length > 0) {
+                    <span class="rounded-full bg-[var(--color-primary-container)] px-2 py-0.5 text-xs font-medium text-[var(--color-on-primary-container)]">
+                      {{ unreadNotifications().length }} mới
+                    </span>
+                  }
+                </div>
+                <div class="flex items-center gap-1">
+                  <button
+                    (click)="openNotificationModal()"
+                    class="p-1.5 rounded-full text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-variant)]/50 transition-colors"
+                    title="Xem tất cả thông báo"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-lg">open_in_new</span>
+                  </button>
+                  @if (unreadNotifications().length > 0) {
+                    <button
+                      (click)="markAllAsRead()"
+                      class="text-xs text-[var(--color-primary)] hover:underline font-medium"
+                      type="button"
+                    >
+                      Đánh dấu tất cả đã đọc
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- List -->
+              <div class="max-h-80 overflow-y-auto divide-y divide-[var(--color-outline-variant)]/50">
+                @if (unreadNotifications().length === 0) {
+                  <div class="p-6 text-center text-sm text-[var(--color-on-surface-variant)]">
+                    <span class="material-symbols-outlined text-3xl mb-1 text-[var(--color-outline)]">notifications_off</span>
+                    <p>Không có thông báo chưa đọc</p>
+                  </div>
+                } @else {
+                  @for (item of unreadNotifications(); track item.id) {
+                    <div (click)="openNotification(item)" class="cursor-pointer p-3 hover:bg-[var(--color-surface-variant)]/30 transition-colors flex gap-3 items-start group">
+                      <div class="mt-0.5">
+                        @if (item.notificationType === 'ESCALATION') {
+                          <span class="material-symbols-outlined text-amber-500 text-xl">warning</span>
+                        } @else if (item.notificationType === 'ASSIGNMENT') {
+                          <span class="material-symbols-outlined text-blue-500 text-xl">assignment_ind</span>
+                        } @else {
+                          <span class="material-symbols-outlined text-emerald-500 text-xl">info</span>
+                        }
+                      </div>
+
+                      <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-[var(--color-on-surface)] truncate">{{ item.title }}</p>
+                        <p class="text-xs text-[var(--color-on-surface-variant)] mt-0.5 leading-snug line-clamp-2">{{ item.message }}</p>
+                        <span class="text-[10px] text-[var(--color-outline)] mt-1 block">
+                          {{ item.createdAt | appDate: 'short' }}
+                        </span>
+                      </div>
+
+                      <button
+                        (click)="markAsRead(item.id, $event)"
+                        class="text-[var(--color-outline)] hover:text-[var(--color-primary)] p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Đánh dấu đã đọc"
+                        type="button"
+                      >
+                        <span class="material-symbols-outlined text-base">check_circle</span>
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          }
+        </div>
+        }
+
+        <!-- Role Switcher (Admin only) -->
+        @if (store.isAuthenticated() && isAdminOnly()) {
+          <div class="relative">
+            <select
+              aria-label="Switch Role"
+              [value]="getCurrentDisplayRole()"
+              (change)="onRoleChange($event)"
+              class="h-8 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] px-2 text-xs font-medium text-[var(--color-on-surface)] sm:block cursor-pointer"
+            >
+              @for (role of getUserRoles(); track role) {
+                <option [value]="role">{{ getRoleDisplayName(role) }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- Avatar + User Menu Dropdown -->
+        <div class="flex items-center gap-2 border-l border-[var(--color-outline-variant)] pl-3 ml-1 relative">
+          @if (store.isAuthenticated()) {
+            <!-- Avatar Button -->
+            <button
+              (click)="toggleUserMenu()"
+              class="flex items-center gap-2 rounded-lg p-1 hover:bg-[var(--color-surface-variant)]/50 transition-colors focus:outline-none"
+              type="button"
+              title="User menu"
+            >
+              <div
+                class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-[var(--color-outline-variant)]"
+              >
+                <div
+                  class="flex h-full w-full items-center justify-center bg-[var(--color-primary-fixed)] text-xs font-bold text-[var(--color-primary)]"
+                >
+                  {{ getUserInitials() }}
+                </div>
+              </div>
+              <span class="text-sm font-medium text-[var(--color-on-surface)] hidden md:block">
+                {{ store.user()?.fullName || 'User' }}
+              </span>
+              <span class="material-symbols-outlined text-[20px] text-[var(--color-on-surface-variant)]">expand_more</span>
+            </button>
+
+            <!-- User Menu Dropdown -->
+            @if (showUserMenu()) {
+              <div
+                class="absolute right-0 top-full mt-2 min-w-full w-max rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden"
+              >
+                <!-- User Info Header -->
+                <div class="border-b border-[var(--color-outline-variant)] px-4 py-3 bg-[var(--color-surface-container)]">
+                  <p class="text-sm font-semibold text-[var(--color-on-surface)]">
+                    {{ store.user()?.fullName || 'User' }}
+                  </p>
+                  <p class="text-xs text-[var(--color-on-surface-variant)] mt-0.5">
+                    {{ getCurrentDisplayRoleName() }}
+                  </p>
+                </div>
+
+                <!-- Menu Options -->
+                <div class="py-1">
+                  <button
+                    (click)="goToManagementDashboard()"
+                    class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[var(--color-on-surface)] hover:bg-[var(--color-surface-variant)]/50 transition-colors"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                    Trang quản lý
+                  </button>
+                </div>
+
+                <!-- Logout -->
+                <div class="border-t border-[var(--color-outline-variant)] py-1">
+                  <button
+                    (click)="logout()"
+                    class="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[var(--color-error)] hover:bg-[var(--color-error-container)]/30 transition-colors"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-[20px]">logout</span>
+                    Đăng xuất
+                  </button>
+                </div>
+              </div>
+            }
+          } @else {
+            <!-- Login & Register for guests -->
+            <div class="flex items-center gap-2">
+              <a
+                routerLink="/register"
+                class="hidden sm:inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--color-outline-variant)] bg-[var(--color-surface-container)] px-3 text-xs font-medium text-[var(--color-on-surface)] transition-colors hover:bg-[var(--color-surface-container-high)]"
+              >
+                Đăng ký
+              </a>
+              <a
+                routerLink="/login"
+                class="inline-flex h-8 items-center gap-1 rounded-lg bg-[var(--color-primary)] px-3.5 text-xs font-medium text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary)]/90 shadow-sm"
+              >
+                Đăng nhập
+              </a>
+            </div>
+          }
+        </div>
+
+        <!-- Sidebar toggle (mobile) -->
         <button
           (click)="toggleSidebar.emit()"
           type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-          title="Toggle Navigation Menu"
+          class="ml-1 rounded-lg p-2 text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container)] md:hidden"
+          title="Toggle menu"
         >
-          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <span class="material-symbols-outlined text-[22px]" aria-hidden="true">menu</span>
         </button>
-
-        <div class="flex items-center gap-2.5">
-          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white shadow-md shadow-orange-500/20">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <div class="hidden sm:block">
-            <h1 class="text-base font-bold tracking-tight text-slate-900 dark:text-white">Urban Infrastructure Portal</h1>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Hệ thống Báo cáo & Xử lý Sự cố Hạ tầng Đô thị</p>
-          </div>
-        </div>
       </div>
+    </nav>
 
-      <!-- Right: Actions, Language, User Info & Logout -->
-      <div class="flex items-center gap-3 sm:gap-4">
-        <!-- Quick Stats SLA Badge -->
-        <div class="hidden md:flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
-          <span class="inline-block h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
-          <span>94.2% Sự cố đạt cam kết SLA</span>
-        </div>
-
-        <!-- Language Selector -->
-        <select
-          aria-label="Language"
-          [value]="translate.getCurrentLang()"
-          (change)="onLocaleChange($event)"
-          class="h-9 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+    <!-- Notifications Full Modal -->
+    @if (showNotificationModal()) {
+      <!-- Backdrop -->
+      <div
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        (click)="closeNotificationModal()"
+      >
+        <!-- Modal Panel -->
+        <div
+          class="relative flex flex-col w-full max-w-lg max-h-[80vh] rounded-2xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] shadow-2xl overflow-hidden"
+          (click)="$event.stopPropagation()"
         >
-          @for (l of locales; track l) {
-            <option [value]="l">{{ l.toUpperCase() }}</option>
-          }
-        </select>
-
-        <!-- User Profile Dropdown -->
-        <div class="flex items-center gap-3 border-l border-slate-200 pl-3 dark:border-slate-800">
-          <div class="flex items-center gap-2">
-            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
-              {{ getUserInitials() }}
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between border-b border-[var(--color-outline-variant)] px-5 py-4 bg-[var(--color-surface-container)] shrink-0">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-[var(--color-primary)] text-2xl">notifications</span>
+              <div>
+                <h2 class="text-base font-semibold text-[var(--color-on-surface)]">Thông báo</h2>
+                <p class="text-xs text-[var(--color-on-surface-variant)] mt-0.5">{{ modalNotifications().length }} thông báo</p>
+              </div>
             </div>
-            <div class="hidden text-left lg:block">
-              <p class="text-xs font-semibold text-slate-900 dark:text-white">
-                {{ store.user()?.name || 'Cán bộ Xử lý' }}
-              </p>
-              <span class="inline-flex items-center rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 ring-1 ring-inset ring-orange-600/20 dark:bg-orange-900/30 dark:text-orange-400">
-                Đội Quản lý Đô thị
-              </span>
+            <div class="flex items-center gap-2">
+              @if (unreadNotifications().length > 0) {
+                <button
+                  (click)="markAllAsRead()"
+                  class="text-xs text-[var(--color-primary)] hover:underline font-medium"
+                  type="button"
+                >
+                  Đánh dấu tất cả đã đọc
+                </button>
+              }
+              <button
+                (click)="closeNotificationModal()"
+                class="p-1.5 rounded-full text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-variant)]/50 transition-colors"
+                type="button"
+              >
+                <span class="material-symbols-outlined text-xl">close</span>
+              </button>
             </div>
           </div>
 
-          <!-- Logout Button -->
-          <button
-            (click)="logout()"
-            class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors dark:border-slate-800 dark:text-slate-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
-          >
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span class="hidden sm:inline">Đăng xuất</span>
-          </button>
+          <!-- Filter Tabs -->
+          <div class="flex items-center gap-1 px-4 py-2 border-b border-[var(--color-outline-variant)]/50 shrink-0 bg-[var(--color-surface)]">
+            <button
+              (click)="onFilterChange('all')"
+              class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+              [class.bg-[var(--color-primary-container)]]="notificationFilter() === 'all'"
+              [class.text-[var(--color-on-primary-container)]]="notificationFilter() === 'all'"
+              [class.text-[var(--color-on-surface-variant)]]="notificationFilter() !== 'all'"
+              [class.hover:bg-[var(--color-surface-variant)]]="notificationFilter() !== 'all'"
+              type="button"
+            >
+              Tất cả
+            </button>
+            <button
+              (click)="onFilterChange('unread')"
+              class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+              [class.bg-[var(--color-primary-container)]]="notificationFilter() === 'unread'"
+              [class.text-[var(--color-on-primary-container)]]="notificationFilter() === 'unread'"
+              [class.text-[var(--color-on-surface-variant)]]="notificationFilter() !== 'unread'"
+              [class.hover:bg-[var(--color-surface-variant)]]="notificationFilter() !== 'unread'"
+              type="button"
+            >
+              Chưa đọc
+            </button>
+            <button
+              (click)="onFilterChange('read')"
+              class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+              [class.bg-[var(--color-primary-container)]]="notificationFilter() === 'read'"
+              [class.text-[var(--color-on-primary-container)]]="notificationFilter() === 'read'"
+              [class.text-[var(--color-on-surface-variant)]]="notificationFilter() !== 'read'"
+              [class.hover.bg-[var(--color-surface-variant)]]="notificationFilter() !== 'read'"
+              type="button"
+            >
+              Đã đọc
+            </button>
+          </div>
+
+          <!-- Notification List -->
+          <div class="flex-1 overflow-y-auto">
+            @if (modalNotifications().length === 0) {
+              <div class="flex flex-col items-center justify-center py-16 text-center">
+                <span class="material-symbols-outlined text-5xl mb-3 text-[var(--color-outline)]">notifications_off</span>
+                <p class="text-sm font-medium text-[var(--color-on-surface-variant)]">Không có thông báo</p>
+                <p class="text-xs text-[var(--color-outline)] mt-1">
+                  @if (notificationFilter() === 'unread') { Chưa có thông báo chưa đọc }
+                  @else if (notificationFilter() === 'read') { Chưa có thông báo đã đọc }
+                  @else { Danh sách thông báo trống }
+                </p>
+              </div>
+            } @else {
+              @for (item of modalNotifications(); track item.id) {
+                <div
+                  (click)="openNotification(item)"
+                  class="cursor-pointer p-4 hover:bg-[var(--color-surface-variant)]/30 transition-colors flex gap-3 items-start group border-b border-[var(--color-outline-variant)]/30"
+                  [class.opacity-50]="item.isRead"
+                >
+                  <div class="mt-0.5 shrink-0">
+                    @if (item.notificationType === 'ESCALATION') {
+                      <span class="material-symbols-outlined text-amber-500 text-xl">warning</span>
+                    } @else if (item.notificationType === 'ASSIGNMENT') {
+                      <span class="material-symbols-outlined text-blue-500 text-xl">assignment_ind</span>
+                    } @else {
+                      <span class="material-symbols-outlined text-emerald-500 text-xl">info</span>
+                    }
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-[var(--color-on-surface)] truncate">{{ item.title }}</p>
+                    <p class="text-xs text-[var(--color-on-surface-variant)] mt-0.5 leading-snug line-clamp-2">{{ item.message }}</p>
+                    <div class="flex items-center gap-2 mt-1.5">
+                      <span class="text-[10px] text-[var(--color-outline)]">
+                        {{ item.createdAt | appDate: 'short' }}
+                      </span>
+                      @if (item.isRead) {
+                        <span class="text-[10px] text-[var(--color-outline)] flex items-center gap-0.5">
+                          <span class="material-symbols-outlined text-[10px]">check_circle</span> Đã đọc
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <button
+                    (click)="markAsRead(item.id, $event)"
+                    class="shrink-0 text-[var(--color-outline)] hover:text-[var(--color-primary)] p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Đánh dấu đã đọc"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-lg">check_circle</span>
+                  </button>
+                </div>
+              }
+            }
+          </div>
         </div>
       </div>
-    </header>
+    }
   `,
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   @Input() sidebarCollapsed = false
   @Output() toggleSidebar = new EventEmitter<void>()
 
   protected readonly store = inject(AuthStore)
   protected readonly translate = inject(TranslateService)
+  private readonly notificationService = inject(NotificationService)
   private readonly router = inject(Router)
-  protected readonly locales = env.supportedLocales
+  private readonly elementRef = inject(ElementRef)
+
+  protected readonly locales = ['en', 'vi']
+  readonly unreadNotifications = signal<NotificationItem[]>([])
+  readonly modalNotifications = signal<NotificationItem[]>([])
+  readonly showDropdown = signal<boolean>(false)
+  readonly showNotificationModal = signal<boolean>(false)
+  readonly notificationFilter = signal<'all' | 'unread' | 'read'>('all')
+  readonly showUserMenu = signal<boolean>(false)
+  readonly currentDisplayRole = signal<string>('')
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    if (!this.elementRef.nativeElement.contains(event.target)) {
+      this.showDropdown.set(false)
+      this.showUserMenu.set(false)
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.showNotificationModal.set(false)
+  }
+
+  ngOnInit(): void {
+    if (this.store.isAuthenticated()) {
+      this.loadUnreadNotifications()
+      this.initDisplayRole()
+    }
+  }
+
+  private initDisplayRole(): void {
+    const user = this.store.user()
+    if (!user) return
+
+    // Check roles in priority order: Admin > DepartmentManager > DepartmentStaff > Citizen
+    if (user.roles.includes('Admin')) {
+      this.currentDisplayRole.set('Admin')
+    } else if (user.roles.includes('DepartmentManager')) {
+      this.currentDisplayRole.set('DepartmentManager')
+    } else if (user.roles.includes('DepartmentStaff')) {
+      this.currentDisplayRole.set('DepartmentStaff')
+    } else {
+      this.currentDisplayRole.set('Citizen')
+    }
+  }
+
+  toggleUserMenu(): void {
+    this.showUserMenu.update((v) => !v)
+  }
+
+  hasMultipleRoles(): boolean {
+    const user = this.store.user()
+    if (!user) return false
+    return user.roles.length > 1
+  }
+
+  isAdminOnly(): boolean {
+    const user = this.store.user()
+    if (!user) return false
+    // Show role switcher only for Admin users (who have Admin role, possibly with Citizen)
+    return user.roles.includes('Admin') && user.roles.length <= 2
+  }
+
+  getUserRoles(): string[] {
+    const user = this.store.user()
+    if (!user) return []
+
+    // Return roles in priority order
+    const priorityOrder = ['Admin', 'DepartmentManager', 'DepartmentStaff', 'Citizen']
+    return priorityOrder.filter(role => user.roles.includes(role))
+  }
+
+  getCurrentDisplayRole(): string {
+    return this.currentDisplayRole()
+  }
+
+  getRoleDisplayName(role: string): string {
+    const roleNames: Record<string, string> = {
+      'Admin': 'Quản trị viên',
+      'DepartmentManager': 'Trưởng phòng',
+      'DepartmentStaff': 'Nhân viên',
+      'Citizen': 'Công dân'
+    }
+    return roleNames[role] || role
+  }
+
+  getCurrentDisplayRoleName(): string {
+    return this.getRoleDisplayName(this.currentDisplayRole())
+  }
+
+  onRoleChange(event: Event): void {
+    const newRole = (event.target as HTMLSelectElement).value
+    this.currentDisplayRole.set(newRole)
+    // Navigate to appropriate dashboard based on selected role
+    this.goToManagementDashboard()
+  }
+
+  goToManagementDashboard(): void {
+    this.showUserMenu.set(false)
+    const role = this.currentDisplayRole()
+
+    switch (role) {
+      case 'Admin':
+        void this.router.navigate(['/admin'])
+        break
+      case 'DepartmentManager':
+        void this.router.navigate(['/staff-manager/dashboard'])
+        break
+      case 'DepartmentStaff':
+        void this.router.navigate(['/staff/dashboard'])
+        break
+      case 'Citizen':
+      default:
+        void this.router.navigate(['/citizen/dashboard'])
+        break
+    }
+  }
+
+  loadUnreadNotifications(): void {
+    const userId = this.store.user()?.id
+    this.notificationService.getUnreadNotifications(userId).subscribe({
+      next: (items) => this.unreadNotifications.set(items || []),
+      error: () => this.unreadNotifications.set([]),
+    })
+  }
+
+  loadAllNotifications(): void {
+    const userId = this.store.user()?.id
+    this.notificationService.getAllNotifications(userId).subscribe({
+      next: (items) => this.modalNotifications.set(items || []),
+      error: () => this.modalNotifications.set([]),
+    })
+  }
+
+  loadModalNotifications(filter: 'all' | 'unread' | 'read'): void {
+    const userId = this.store.user()?.id
+    if (filter === 'unread') {
+      this.notificationService.getUnreadNotifications(userId).subscribe({
+        next: (items) => this.modalNotifications.set(items || []),
+        error: () => this.modalNotifications.set([]),
+      })
+    } else if (filter === 'read') {
+      this.notificationService.getReadNotifications(userId).subscribe({
+        next: (items) => this.modalNotifications.set(items || []),
+        error: () => this.modalNotifications.set([]),
+      })
+    } else {
+      this.notificationService.getAllNotifications(userId).subscribe({
+        next: (items) => this.modalNotifications.set(items || []),
+        error: () => this.modalNotifications.set([]),
+      })
+    }
+  }
+
+  toggleNotificationsDropdown(): void {
+    this.showDropdown.update((v) => !v)
+  }
+
+  markAsRead(id: number, event: Event): void {
+    event.stopPropagation()
+    const userId = this.store.user()?.id
+    this.notificationService.markAsRead(id, userId).subscribe({
+      next: () => {
+        this.unreadNotifications.update((list) => list.filter((n) => n.id !== id))
+        this.modalNotifications.update((list) =>
+          list.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        )
+      },
+    })
+  }
+
+  openNotification(item: NotificationItem): void {
+    const userId = this.store.user()?.id
+    this.notificationService.markAsRead(item.id, userId).subscribe({
+      next: () => {
+        this.unreadNotifications.update((list) => list.filter((n) => n.id !== item.id))
+        this.modalNotifications.update((list) =>
+          list.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
+        )
+      },
+    })
+    this.showDropdown.set(false)
+    this.showNotificationModal.set(false)
+    if (item.issueId) void this.router.navigate(['/citizen/reports', item.issueId])
+  }
+
+  openNotificationModal(): void {
+    this.showNotificationModal.set(true)
+    this.showDropdown.set(false)
+    this.loadModalNotifications('all')
+  }
+
+  onFilterChange(filter: 'all' | 'unread' | 'read'): void {
+    this.notificationFilter.set(filter)
+    this.loadModalNotifications(filter)
+  }
+
+  closeNotificationModal(): void {
+    this.showNotificationModal.set(false)
+  }
+
+  markAllAsRead(): void {
+    const userId = this.store.user()?.id
+    this.notificationService.markAllAsRead(userId).subscribe({
+      next: () => {
+        this.unreadNotifications.set([])
+        this.modalNotifications.update((list) => list.map((n) => ({ ...n, isRead: true })))
+      },
+    })
+  }
+
+  getUserRole(): string {
+    const user = this.store.user()
+    if (!user) return 'Citizen'
+    
+    // Check roles array for role match
+    if (user.roles.includes('DepartmentManager')) return 'DepartmentManager'
+    if (user.roles.includes('DepartmentStaff')) return 'DepartmentStaff'
+    if (user.roles.includes('Admin')) return 'Admin'
+    
+    return 'Citizen'
+  }
 
   onLocaleChange(event: Event): void {
     const lang = (event.target as HTMLSelectElement).value
@@ -105,10 +651,10 @@ export class HeaderComponent {
   }
 
   getUserInitials(): string {
-    const name = this.store.user()?.name || 'Cán bộ Xử lý'
+    const name = this.store.user()?.fullName || 'Admin User'
     return name
       .split(' ')
-      .map((n) => n[0])
+      .map((n: string) => n[0])
       .slice(-2)
       .join('')
       .toUpperCase()
@@ -117,5 +663,12 @@ export class HeaderComponent {
   logout(): void {
     this.store.logout()
     void this.router.navigate(['/login'])
+  }
+
+  goToDashboard(event: Event): void {
+    event.preventDefault()
+    if (this.store.isAdmin()) {
+      void this.router.navigate(['/admin'])
+    }
   }
 }
